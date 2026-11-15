@@ -2,9 +2,13 @@ import { Link, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
 import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
+import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
 
-function Home({ email }: { email: string | undefined }) {
+const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
+
+function Home({ userId, email }: { userId: string; email: string | undefined }) {
+  const profile = useProfile(userId)
   return (
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -14,10 +18,22 @@ function Home({ email }: { email: string | undefined }) {
         </button>
       </header>
       <div>
-        <h1 style={{ fontSize: 40 }}>Dnd Hub</h1>
+        <h1 style={{ fontSize: 40 }}>
+          {profile.status === 'ready' && profile.profile.display_name ? profile.profile.display_name : 'Dnd Hub'}
+        </h1>
         <span className="subtitle">Кампания «Хвор»</span>
       </div>
-      <p className="muted">Ты вошёл как {email}. Скоро здесь будет лист персонажа.</p>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {profile.status === 'loading' && <span className="muted">Загружаю профиль…</span>}
+        {profile.status === 'ready' && (
+          <span className={profile.profile.role === 'gm' ? 'chip chip-blood' : 'chip chip-tech'}>
+            {ROLE_LABEL[profile.profile.role]}
+          </span>
+        )}
+        {profile.status === 'error' && <p className="error">{profile.message}</p>}
+        <span className="muted">Почта: {email}</span>
+      </div>
+      <p className="muted">Скоро здесь будет лист персонажа.</p>
       <Link className="btn" to="/status">
         Проверка доступа
       </Link>
@@ -29,7 +45,7 @@ function Protected() {
   const auth = useAuth()
   if (auth.status === 'loading') return <p className="muted">Загрузка…</p>
   if (auth.status === 'signed-out') return <LoginPage />
-  return <Home email={auth.session.user.email} />
+  return <Home userId={auth.session.user.id} email={auth.session.user.email} />
 }
 
 function App() {
