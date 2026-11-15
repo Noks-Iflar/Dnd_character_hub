@@ -1,4 +1,5 @@
 import { Link, Route, Routes } from 'react-router'
+import { StatusPage } from './features/status/StatusPage'
 
 function Home() {
   return (
@@ -10,22 +11,12 @@ function Home() {
   )
 }
 
-function Status() {
-  return (
-    <>
-      <h1>Проверка доступа</h1>
-      <p>Здесь будет проверка связи с Supabase.</p>
-      <Link to="/">На главную</Link>
-    </>
-  )
-}
-
 function App() {
   return (
     <main>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/status" element={<Status />} />
+        <Route path="/status" element={<StatusPage />} />
       </Routes>
     </main>
   )
