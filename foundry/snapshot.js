@@ -167,13 +167,34 @@
   function download(data, filename) {
     const json = JSON.stringify(data);
     const save = foundry.utils?.saveDataToFile ?? globalThis.saveDataToFile;
-    save(json, 'application/json', filename);
+    if (typeof save === 'function') {
+      save(json, 'application/json', filename);
+      return;
+    }
+    // Fallback: plain browser download
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /** Reads the chosen actor id from the dialog, whatever the callback receives. */
+  function readActorChoice(event, button, dialog) {
+    const root = dialog?.element ?? button?.closest?.('.application, dialog') ?? document;
+    const select = button?.form?.elements?.actor ?? root.querySelector?.('select[name="actor"]');
+    return select?.value ?? null;
   }
 
   const slug = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'actor';
   const today = new Date().toISOString().slice(0, 10);
 
   // ---- UI ---------------------------------------------------------------
+
+  try {
 
   if (!game.user.isGM) {
     ui.notifications.warn('Снимок делает только мастер.');
@@ -203,7 +224,7 @@
     content: `<div class="form-group"><label>Персонаж</label><select name="actor">${options}</select></div>
       <p>Партия: ${party.length ? party.map((a) => a.name).join(', ') : 'нет персонажей с владельцем-игроком'}</p>`,
     buttons: [
-      { action: 'one', label: 'Снимок персонажа', default: true, callback: (event, button) => button.form.elements.actor.value },
+      { action: 'one', label: 'Снимок персонажа', default: true, callback: readActorChoice },
       { action: 'party', label: 'Вся партия', callback: () => 'party' },
     ],
     rejectClose: false,
@@ -215,13 +236,20 @@
       ui.notifications.warn('Нет персонажей, которыми владеют игроки.');
       return;
     }
+    ui.notifications.info('Собираю снимок партии…');
     const snapshots = [];
     for (const actor of party) snapshots.push(await snapshot(actor));
     download({ schemaVersion: SCHEMA_VERSION, kind: 'party', exportedAt: new Date().toISOString(), snapshots }, `dndhub-party-${today}.json`);
     ui.notifications.info(`Снимок партии готов: ${snapshots.length} перс.`);
   } else {
     const actor = game.actors.get(choice);
+    if (!actor) throw new Error(`не нашёл персонажа (выбор: ${choice})`);
+    ui.notifications.info(`Собираю снимок «${actor.name}»…`);
     download(await snapshot(actor), `dndhub-${slug(actor.name)}-${today}.json`);
     ui.notifications.info(`Снимок «${actor.name}» готов.`);
+  }
+  } catch (e) {
+    console.error('Dnd Hub | snapshot failed', e);
+    ui.notifications.error(`Dnd Hub: снимок не получился — ${e?.message ?? e}`, { permanent: true });
   }
 })();
