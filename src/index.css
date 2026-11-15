@@ -567,3 +567,24 @@ button.attack-btn:hover {
 .pip.full {
   background: var(--magic);
 }
+
+.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.character-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--text);
+}
+.character-card:hover {
+  border-color: var(--line-strong);
+  color: var(--text-strong);
+}

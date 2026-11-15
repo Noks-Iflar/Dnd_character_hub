@@ -83,3 +83,57 @@ describe('migration on a project with existing users', () => {
     expect(r.rows).toEqual([{ display_name: 'gm', role: 'player' }])
   })
 })
+
+describe('snapshots', () => {
+  let snapDb: PGlite
+  let velian = ''
+
+  beforeAll(async () => {
+    snapDb = await createDb()
+    await snapDb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const r = await runAs(
+      snapDb,
+      GM,
+      `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1'), ('${P2}', 'Kairen', 'a2') returning id, name`,
+    )
+    if (!r.ok) throw new Error(r.error)
+    velian = String(r.rows.find((row) => row.name === 'Velian')?.id)
+    const kairen = String(r.rows.find((row) => row.name === 'Kairen')?.id)
+    const ins = await runAs(
+      snapDb,
+      GM,
+      `insert into public.snapshots (character_id, data) values ('${velian}', '{"n":1}'), ('${velian}', '{"n":2}'), ('${kairen}', '{"n":3}') returning created_by`,
+    )
+    if (!ins.ok) throw new Error(ins.error)
+    expect(ins.rows.every((row) => row.created_by === GM)).toBe(true)
+  })
+
+  it('player sees only snapshots of own character', async () => {
+    const r = await runAs(snapDb, P1, `select data->>'n' as n from public.snapshots order by n`)
+    expect(r).toEqual({ ok: true, rows: [{ n: '1' }, { n: '2' }] })
+  })
+
+  it('gm sees all snapshots', async () => {
+    const r = await runAs(snapDb, GM, 'select id from public.snapshots')
+    expect(r.ok && r.rows.length).toBe(3)
+  })
+
+  it('player cannot upload snapshots', async () => {
+    const r = await runAs(snapDb, P1, `insert into public.snapshots (character_id, data) values ('${velian}', '{}')`)
+    expect(r.ok).toBe(false)
+  })
+
+  it('nobody can change or delete snapshots, not even the gm', async () => {
+    for (const uid of [GM, P1]) {
+      expect((await runAs(snapDb, uid, `update public.snapshots set data = '{}'`)).ok).toBe(false)
+      expect((await runAs(snapDb, uid, 'delete from public.snapshots')).ok).toBe(false)
+    }
+  })
+
+  it('anonymous visitor sees nothing', async () => {
+    expect(await runAs(snapDb, null, 'select id from public.snapshots')).toEqual({ ok: true, rows: [] })
+  })
+})
