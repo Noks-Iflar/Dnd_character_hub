@@ -34,6 +34,12 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Users created before this migration get a profile too
+insert into public.profiles (id, display_name)
+select id, coalesce(split_part(email, '@', 1), '')
+from auth.users
+on conflict (id) do nothing;
+
 -- True when the current user is the GM. Security definer avoids RLS recursion.
 create function public.is_gm()
 returns boolean
