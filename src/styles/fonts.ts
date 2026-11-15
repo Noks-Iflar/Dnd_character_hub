@@ -1,0 +1,11 @@
+// Self-hosted fonts (work offline in the installed PWA). Latin + Cyrillic only.
+import '@fontsource/alegreya-sans/latin-400.css'
+import '@fontsource/alegreya-sans/cyrillic-400.css'
+import '@fontsource/alegreya-sans/latin-500.css'
+import '@fontsource/alegreya-sans/cyrillic-500.css'
+import '@fontsource/alegreya-sans/latin-700.css'
+import '@fontsource/alegreya-sans/cyrillic-700.css'
+import '@fontsource/cormorant-garamond/latin-700.css'
+import '@fontsource/cormorant-garamond/cyrillic-700.css'
+import '@fontsource/cormorant-sc/latin-700.css'
+import '@fontsource/cormorant-sc/cyrillic-700.css'

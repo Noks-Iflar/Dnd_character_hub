@@ -39,18 +39,26 @@ export function StatusPage() {
 
   return (
     <>
-      <h1>Проверка доступа</h1>
-      <p>
-        {result.state === 'no-keys' && '⚪ Ключи Supabase не заданы.'}
-        {result.state === 'checking' && '⏳ Проверяю связь с Supabase…'}
-        {result.state === 'ok' && `🟢 Supabase доступен (ответ за ${result.ms} мс).`}
-        {result.state === 'error' && `🔴 Supabase недоступен. ${result.message}`}
+      <span className="brand">Dnd Hub</span>
+      <h1 style={{ fontSize: 32 }}>Проверка доступа</h1>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
+        {result.state === 'no-keys' && <span className="chip">Ключи Supabase не заданы</span>}
+        {result.state === 'checking' && <span className="chip">Проверяю связь с Supabase…</span>}
+        {result.state === 'ok' && <span className="chip chip-tech">Supabase доступен · {result.ms} мс</span>}
+        {result.state === 'error' && (
+          <>
+            <span className="chip chip-blood">Supabase недоступен</span>
+            <span className="muted">{result.message}</span>
+          </>
+        )}
+        {supabaseUrl && <span className="muted">Адрес: {supabaseUrl}</span>}
+      </div>
+      <p className="muted">
+        Если видишь красную метку, попробуй включить VPN, обнови страницу и напиши мастеру.
       </p>
-      {supabaseUrl && <p>Адрес: {supabaseUrl}</p>}
-      <p>
-        Если видишь красный кружок, попробуй включить VPN и обновить страницу, и напиши мастеру.
-      </p>
-      <Link to="/">На главную</Link>
+      <Link className="btn" to="/">
+        На главную
+      </Link>
     </>
   )
 }

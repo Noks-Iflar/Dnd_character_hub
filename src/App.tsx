@@ -4,16 +4,21 @@ import { StatusPage } from './features/status/StatusPage'
 function Home() {
   return (
     <>
-      <h1>Хвор</h1>
-      <p>Листы персонажей между сессиями. Скоро здесь что-то будет.</p>
-      <Link to="/status">Проверка доступа</Link>
+      <div>
+        <h1 style={{ fontSize: 40 }}>Dnd Hub</h1>
+        <span className="subtitle">Кампания «Хвор»</span>
+      </div>
+      <p className="muted">Листы персонажей между сессиями. Скоро здесь что-то будет.</p>
+      <Link className="btn" to="/status">
+        Проверка доступа
+      </Link>
     </>
   )
 }
 
 function App() {
   return (
-    <main>
+    <main className="page">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/status" element={<StatusPage />} />
