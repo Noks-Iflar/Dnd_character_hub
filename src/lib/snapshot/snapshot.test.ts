@@ -91,7 +91,8 @@ describe('buildSheet', () => {
     }
     const s = sheetOf(snap)
     expect(s.ac).toEqual({ value: 17, from: 'foundry' })
-    expect(s.hp).toEqual({ value: 40, max: { value: 44, from: 'foundry' }, temp: null })
+    // Current HP is editable, so it comes from the source (7); the maximum comes from Foundry
+    expect(s.hp).toEqual({ value: 7, max: { value: 44, from: 'foundry' }, temp: null })
     expect(s.abilities[0]?.save).toEqual({ value: 6, from: 'foundry' })
     expect(s.skills.find((k) => k.key === 'ath')?.total).toEqual({ value: 9, from: 'foundry' })
     expect(s.speed).toEqual({ value: 25, from: 'foundry' })
@@ -148,7 +149,7 @@ describe.skipIf(!existsSync(join(SNAPSHOTS, 'party-2026-11-15.json')))('real par
   const load = () => {
     const r = parseSnapshotJson(readFileSync(join(SNAPSHOTS, 'party-2026-11-15.json'), 'utf8'))
     if (!r.ok) throw new Error(r.error)
-    return r.snapshots.map(buildSheet)
+    return r.snapshots.map((s) => buildSheet(s))
   }
 
   it('contains two characters with Foundry values', () => {
@@ -165,7 +166,8 @@ describe.skipIf(!existsSync(join(SNAPSHOTS, 'party-2026-11-15.json')))('real par
     const sword = s.attacks.find((a) => a.name === 'Greatsword')
     expect(sword).toMatchObject({ toHit: 5, damages: [{ formula: '2d6 + 3', type: 'slashing' }] })
     expect(s.attacks.find((a) => a.activity === 'Grapple/Shove')?.save).toEqual({ dc: 13, ability: 'str' })
-    expect(s.resources).toContainEqual({ id: expect.any(String), name: 'Rage', value: 3, max: 3, kind: 'uses' })
+    expect(s.resources.find((r) => r.name === 'Rage')).toMatchObject({ value: 3, max: 3, kind: 'uses', stores: 'spent' })
+    expect(s.hitDice).toEqual([{ classId: expect.any(String), name: 'Barbarian', denomination: 'd12', total: 3, spent: 0 }])
     expect(s.spellcasting).toBe(null)
   })
 
