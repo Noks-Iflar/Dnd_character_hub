@@ -75,3 +75,11 @@ describe('characters', () => {
     expect(await runAs(db, null, 'select id from public.profiles')).toEqual({ ok: true, rows: [] })
   })
 })
+
+describe('migration on a project with existing users', () => {
+  it('creates profiles for users added before it', async () => {
+    const existing = await createDb(`insert into auth.users values ('${GM}', 'gm@example.com')`)
+    const r = await existing.query('select display_name, role from public.profiles')
+    expect(r.rows).toEqual([{ display_name: 'gm', role: 'player' }])
+  })
+})

@@ -19,9 +19,11 @@ alter default privileges in schema public grant all on tables to authenticated, 
 alter default privileges in schema public grant all on functions to authenticated, anon;
 `
 
-export async function createDb(): Promise<PGlite> {
+/** `beforeMigrations` runs after the auth stub, e.g. to add users that already exist. */
+export async function createDb(beforeMigrations = ''): Promise<PGlite> {
   const db = new PGlite()
   await db.exec(SUPABASE_STUB)
+  if (beforeMigrations) await db.exec(beforeMigrations)
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort()
   for (const file of files) {
     await db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'))
