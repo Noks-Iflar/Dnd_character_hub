@@ -366,3 +366,36 @@ describe('diary', () => {
     expect(d.ok && d.rows.length).toBe(1)
   })
 })
+
+describe('library', () => {
+  let ldb: PGlite
+  const row = (uuid: string) =>
+    `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('${uuid}', 'ag', 'p', 'P', 'items', 'weapon', 'Кинжал')`
+
+  beforeAll(async () => {
+    ldb = await createDb()
+    await ldb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+  })
+
+  it('the GM loads and replaces entries; players only read', async () => {
+    expect((await runAs(ldb, GM, row('u1'))).ok).toBe(true)
+    expect((await runAs(ldb, P1, row('u2'))).ok).toBe(false)
+    expect(await runAs(ldb, P1, 'select name from public.library')).toEqual({ ok: true, rows: [{ name: 'Кинжал' }] })
+    expect(await runAs(ldb, P1, `update public.library set name = 'x' returning uuid`)).toEqual({ ok: true, rows: [] })
+    expect(await runAs(ldb, P1, 'delete from public.library returning uuid')).toEqual({ ok: true, rows: [] })
+    const upsert = await runAs(ldb, GM, `${row('u1')} on conflict (uuid) do update set name = 'Кинжал +1' returning name`)
+    expect(upsert).toEqual({ ok: true, rows: [{ name: 'Кинжал +1' }] })
+  })
+
+  it('anonymous visitors see nothing', async () => {
+    expect(await runAs(ldb, null, 'select uuid from public.library')).toEqual({ ok: true, rows: [] })
+  })
+
+  it('unknown categories are rejected', async () => {
+    const bad = await runAs(ldb, GM, `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('u9', 'ag', 'p', 'P', 'monsters', 'npc', 'x')`)
+    expect(bad.ok).toBe(false)
+  })
+})
