@@ -744,14 +744,85 @@ button.attack-btn:hover {
 
 .character-card {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
   text-decoration: none;
   color: var(--text);
+}
+:nth-child(even of .character-card) {
+  border-radius: var(--r2);
 }
 .character-card:hover {
   border-color: var(--line-strong);
   color: var(--text-strong);
+}
+.character-card .portrait-ring {
+  margin: -4px 0;
+}
+.character-card-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.character-card-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.1;
+}
+.hp-low {
+  color: var(--blood-text);
+}
+.badge-blood {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px 8px 13px 7px / 8px 13px 7px 12px;
+  background: var(--blood);
+  color: var(--on-blood);
+  font-size: 14px;
+  font-weight: 700;
+}
+/* Empty states: a picture, a title with a brush, a line of text */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  text-align: center;
+}
+.empty-state img {
+  width: 220px;
+  height: 220px;
+}
+.empty-state h2 {
+  font-size: 30px;
+}
+.empty-state p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.empty-state .brush-underline {
+  margin: 0;
+  width: 150px;
+  height: 10px;
+  background-color: var(--divider);
+}
+.empty-state .brush-underline.red {
+  background-color: var(--blood);
 }
 
 .stepper {
@@ -1083,4 +1154,36 @@ button.attack-btn:hover {
 /* The roll result floats over content: card colour on a solid page colour */
 .roll-toast {
   background: linear-gradient(var(--surface), var(--surface)), var(--bg);
+}
+
+.chip-on-art {
+  border: none;
+  background: rgba(24, 23, 26, 0.78);
+  color: #e8e4dc;
+}
+.chip-on-art::before {
+  display: none;
+}
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+.party-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card.nested {
+  margin: 0 10px;
+  background: var(--surface-sunken);
+}
+details.card.nested > summary {
+  cursor: pointer;
+  list-style: none;
+  border-bottom: none;
+}
+details.card.nested > summary::-webkit-details-marker {
+  display: none;
 }

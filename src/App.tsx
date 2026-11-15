@@ -7,58 +7,79 @@ import { SheetPage } from './features/sheet/SheetPage'
 import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
 import { listCharacters, type Character } from './lib/db'
-import { formatDateTime } from './lib/format-date'
-import { clearOffline, isOffline, loadOffline, onlineOr, saveCharacters } from './lib/offline'
+import { clearOffline, isOffline, loadOffline, offlineSnapshot, onlineOr, saveCharacters } from './lib/offline'
+import { parseSnapshotJson } from './lib/snapshot/parse'
+import { buildSheet } from './lib/snapshot/sheet'
+import { loadSummaries, type CharacterSummary } from './lib/summary'
 import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
 import { AppHeader } from './components/AppHeader'
+import { CharacterCard } from './components/CharacterCard'
+import { EmptyState } from './components/EmptyState'
 
 const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
 
 function MyCharacters({ isGm, userId }: { isGm: boolean; userId: string }) {
   const [characters, setCharacters] = useState<Character[] | null>(null)
+  const [summaries, setSummaries] = useState<Record<string, CharacterSummary>>({})
   const [error, setError] = useState<string | null>(null)
   const [offline, setOffline] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     onlineOr(listCharacters)
       .then((list) => {
+        if (cancelled) return
         saveCharacters(userId, list)
         setCharacters(list)
+        return loadSummaries(list.map((c) => c.id)).then((sum) => !cancelled && setSummaries(sum))
       })
       .catch((e: unknown) => {
+        if (cancelled) return
         const cached = loadOffline()
         if (cached?.userId === userId && cached.characters.length) {
           setCharacters(cached.characters)
+          setSummaries(offlineSummaries(cached.characters))
           setOffline(true)
         } else {
           setError(e instanceof Error ? e.message : String(e))
         }
       })
+    return () => {
+      cancelled = true
+    }
   }, [userId])
 
   if (error) return <p className="error">{error}</p>
   if (!characters) return <p className="muted">Загружаю персонажей…</p>
   if (!characters.length) {
-    return (
-      <p className="muted">
-        {isGm
-          ? 'Персонажей пока нет. Загрузи снимок партии на экране мастера.'
-          : 'Персонажей пока нет. Мастер привяжет тебя к персонажу после загрузки снимка.'}
-      </p>
+    return isGm ? (
+      <p className="muted">Персонажей пока нет. Загрузи снимок партии на экране мастера.</p>
+    ) : (
+      <EmptyState image="empty-scroll" alt="Свёрнутый свиток и перо в чернильнице" title="Снимка ещё нет">
+        Мастер выгрузит твоего персонажа после ближайшей сессии. Тогда лист появится здесь.
+      </EmptyState>
     )
   }
   return (
     <div className="attack-list">
       {offline && <p className="chip chip-tech">Нет связи: показаны сохранённые персонажи</p>}
-      {characters.map((c) => (
-        <Link key={c.id} to={`/character/${c.id}`} className="card character-card">
-          <span className="row-number">{c.name}</span>
-          <span className="muted small">Снимок: {formatDateTime(c.lastSnapshotAt)}</span>
-        </Link>
+      {characters.map((c, i) => (
+        <CharacterCard key={c.id} id={c.id} name={c.name} summary={summaries[c.id]} index={i} />
       ))}
     </div>
   )
+}
+
+/** Summaries from snapshots saved on this device, for offline use. */
+function offlineSummaries(characters: Character[]): Record<string, CharacterSummary> {
+  const out: Record<string, CharacterSummary> = {}
+  for (const c of characters) {
+    const saved = offlineSnapshot(c.id)
+    const parsed = saved ? parseSnapshotJson(JSON.stringify(saved.data)) : null
+    if (saved && parsed?.ok && parsed.snapshots[0]) out[c.id] = { sheet: buildSheet(parsed.snapshots[0]), snapshotAt: saved.createdAt }
+  }
+  return out
 }
 
 function Home({ userId, email }: { userId: string; email: string | undefined }) {

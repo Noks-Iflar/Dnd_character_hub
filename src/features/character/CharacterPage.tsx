@@ -10,6 +10,7 @@ import { buildSheet } from '../../lib/snapshot/sheet'
 import type { Snapshot } from '../../lib/snapshot/types'
 import { SheetView, type SheetEdit } from '../sheet/SheetView'
 import { AppHeader } from '../../components/AppHeader'
+import { EmptyState } from '../../components/EmptyState'
 
 type State =
   | { status: 'loading' }
@@ -97,7 +98,11 @@ export function CharacterPage() {
         </Link>
       </AppHeader>
       {state.status === 'loading' && <p className="muted">Загружаю лист…</p>}
-      {state.status === 'empty' && <p className="muted">У этого персонажа ещё нет снимка. Его загружает мастер.</p>}
+      {state.status === 'empty' && (
+        <EmptyState image="empty-scroll" alt="Свёрнутый свиток и перо в чернильнице" title="Снимка ещё нет">
+          Мастер выгрузит персонажа после ближайшей сессии. Тогда лист появится здесь.
+        </EmptyState>
+      )}
       {state.status === 'error' && <p className="error">{state.message}</p>}
       {state.status === 'offline' && (
         <p className="chip chip-tech">Нет связи: сохранённый снимок от {formatDateTime(state.createdAt)}, только просмотр</p>
