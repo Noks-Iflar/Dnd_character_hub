@@ -1,9 +1,9 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router'
 import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { buildSheet } from '../../lib/snapshot/sheet'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { SheetView } from './SheetView'
+import { AppHeader } from '../../components/AppHeader'
 
 /** Phase 2: view a sheet from a local file (snapshot or Export Data). Nothing is uploaded. */
 export function SheetPage() {
@@ -34,15 +34,12 @@ export function SheetPage() {
 
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <Link className="brand" to="/" style={{ textDecoration: 'none' }}>
-          Dnd Hub
-        </Link>
-        <label className="btn" style={{ minHeight: 40 }}>
+      <AppHeader>
+        <label className="text-btn">
           Открыть файл
           <input type="file" accept=".json,application/json" onChange={onFile} hidden />
         </label>
-      </header>
+      </AppHeader>
 
       {error && (
         <p className="error" role="alert">

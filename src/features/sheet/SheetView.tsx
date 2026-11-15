@@ -8,6 +8,7 @@ import { Approx } from './Approx'
 import { d20, signed, statText } from './format'
 import { RollToast, type ShownRoll } from './RollToast'
 import { Stepper } from './Stepper'
+import { Portrait } from '../../components/Portrait'
 
 const COINS: [string, string][] = [
   ['pp', 'пм'],
@@ -89,13 +90,7 @@ export function SheetView({ sheet, edit }: { sheet: Sheet; edit?: SheetEdit }) {
   return (
     <>
       <header className="sheet-header">
-        {sheet.portrait ? (
-          <img className="portrait" src={sheet.portrait} alt={`Портрет: ${sheet.name}`} />
-        ) : (
-          <div className="portrait portrait-empty" aria-hidden="true">
-            {sheet.name.slice(0, 1).toUpperCase()}
-          </div>
-        )}
+        <Portrait src={sheet.portrait} name={sheet.name} />
         <div className="sheet-title">
           <h1>{sheet.name}</h1>
           <span className="muted">{[sheet.race, classLine].filter(Boolean).join(' · ')}</span>
@@ -115,8 +110,8 @@ export function SheetView({ sheet, edit }: { sheet: Sheet; edit?: SheetEdit }) {
             {sheet.hp.temp ? <span className="temp"> +{sheet.hp.temp}</span> : null}
           </span>
         </div>
-        <div className="hp-bar" aria-hidden="true">
-          <div style={{ width: `${hpPercent}%` }} />
+        <div className="hp-bar" role="img" aria-label={`Хиты: ${sheet.hp.value ?? '—'} из ${hpMax ?? '—'}`} style={{ ['--hp' as string]: `${hpPercent}%` }}>
+          <div />
         </div>
         {edit && (
           <>

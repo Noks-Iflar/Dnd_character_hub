@@ -19,6 +19,7 @@ import type { Profile } from '../../lib/profile'
 import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { PendingChanges } from './PendingChanges'
+import { AppHeader } from '../../components/AppHeader'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -111,12 +112,11 @@ export function GmPage() {
 
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link className="brand" to="/" style={{ textDecoration: 'none' }}>
-          Dnd Hub
+      <AppHeader>
+        <Link className="text-btn" to="/">
+          На главную
         </Link>
-        <Link to="/">← На главную</Link>
-      </header>
+      </AppHeader>
       <h1 style={{ fontSize: 32 }}>Мастер</h1>
 
       <h2 className="section-title">Загрузить снимок</h2>

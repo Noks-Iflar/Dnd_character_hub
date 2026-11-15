@@ -11,6 +11,7 @@ import { formatDateTime } from './lib/format-date'
 import { clearOffline, isOffline, loadOffline, onlineOr, saveCharacters } from './lib/offline'
 import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
+import { AppHeader } from './components/AppHeader'
 
 const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
 
@@ -65,11 +66,10 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
   const isGm = profile.status === 'ready' && profile.profile.role === 'gm'
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="brand">Dnd Hub</span>
+      <AppHeader>
         <button
-          className="btn"
-          style={{ minHeight: 40 }}
+          type="button"
+          className="text-btn"
           onClick={() => {
             clearOffline()
             void supabase?.auth.signOut()
@@ -77,7 +77,7 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
         >
           Выйти
         </button>
-      </header>
+      </AppHeader>
       <div>
         <h1 style={{ fontSize: 40 }}>
           {profile.status === 'ready' && profile.profile.display_name ? profile.profile.display_name : 'Dnd Hub'}

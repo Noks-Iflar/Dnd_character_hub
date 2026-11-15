@@ -5,6 +5,9 @@ import './styles/fonts'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './lib/auth'
+import { applyTheme, currentTheme } from './lib/theme'
+
+applyTheme(currentTheme())
 
 // HashRouter: GitHub Pages can't rewrite unknown paths to index.html
 createRoot(document.getElementById('root')!).render(

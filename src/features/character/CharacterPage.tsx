@@ -9,6 +9,7 @@ import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { buildSheet } from '../../lib/snapshot/sheet'
 import type { Snapshot } from '../../lib/snapshot/types'
 import { SheetView, type SheetEdit } from '../sheet/SheetView'
+import { AppHeader } from '../../components/AppHeader'
 
 type State =
   | { status: 'loading' }
@@ -90,12 +91,11 @@ export function CharacterPage() {
 
   return (
     <>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link className="brand" to="/" style={{ textDecoration: 'none' }}>
-          Dnd Hub
+      <AppHeader>
+        <Link className="text-btn" to="/">
+          К персонажам
         </Link>
-        <Link to="/">← К персонажам</Link>
-      </header>
+      </AppHeader>
       {state.status === 'loading' && <p className="muted">Загружаю лист…</p>}
       {state.status === 'empty' && <p className="muted">У этого персонажа ещё нет снимка. Его загружает мастер.</p>}
       {state.status === 'error' && <p className="error">{state.message}</p>}
