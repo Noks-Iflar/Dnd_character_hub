@@ -188,3 +188,35 @@ export async function addChange(input: {
 }
 
 export const snapshotSizeKb = (snapshot: Snapshot): number => Math.round(JSON.stringify(toStoredSnapshot(snapshot)).length / 1024)
+
+export async function setCharacterStatus(characterIds: string[], status: CharacterStatus): Promise<void> {
+  if (!characterIds.length) return
+  const { error } = await client().from('characters').update({ status }).in('id', characterIds)
+  if (error) throw new Error(error.message)
+}
+
+export type PendingChange = Change & { characterId: string; snapshotId: string }
+
+/** Edits not yet applied in Foundry, oldest first (GM sees all characters). */
+export async function listPendingChanges(): Promise<PendingChange[]> {
+  const { data, error } = await client()
+    .from('changes')
+    .select('id, character_id, snapshot_id, path, old_value, new_value, created_at, applied_at')
+    .is('applied_at', null)
+    .order('created_at')
+  if (error) throw new Error(error.message)
+  const out: PendingChange[] = []
+  for (const row of data ?? []) {
+    const change = toChange(row)
+    const characterId = str(get(row, 'character_id'))
+    const snapshotId = str(get(row, 'snapshot_id'))
+    if (change && characterId && snapshotId) out.push({ ...change, characterId, snapshotId })
+  }
+  return out
+}
+
+export async function markChangesApplied(changeIds: string[]): Promise<void> {
+  if (!changeIds.length) return
+  const { error } = await client().from('changes').update({ applied_at: new Date().toISOString() }).in('id', changeIds)
+  if (error) throw new Error(error.message)
+}

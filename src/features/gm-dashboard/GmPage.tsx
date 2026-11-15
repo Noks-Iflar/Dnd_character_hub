@@ -2,23 +2,30 @@ import { useEffect, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router'
 import {
   listCharacters,
+  listPendingChanges,
   listProfiles,
+  markChangesApplied,
   setCharacterOwner,
+  setCharacterStatus,
   snapshotSizeKb,
   uploadSnapshots,
   type Character,
+  type CharacterStatus,
+  type PendingChange,
   type UploadResult,
 } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
 import type { Profile } from '../../lib/profile'
 import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
+import { PendingChanges } from './PendingChanges'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 export function GmPage() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pending, setPending] = useState<Snapshot[]>([])
   const [fileError, setFileError] = useState<string | null>(null)
@@ -30,11 +37,12 @@ export function GmPage() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([listCharacters(), listProfiles()])
-      .then(([c, p]) => {
+    Promise.all([listCharacters(), listProfiles(), listPendingChanges()])
+      .then(([c, p, ch]) => {
         if (cancelled) return
         setCharacters(c)
         setProfiles(p)
+        setPendingChanges(ch)
         setLoadError(null)
       })
       .catch((e: unknown) => !cancelled && setLoadError(errorText(e)))
@@ -80,6 +88,25 @@ export function GmPage() {
     }
   }
 
+  async function run(action: () => Promise<void>) {
+    try {
+      await action()
+      reload()
+    } catch (e) {
+      setLoadError(errorText(e))
+    }
+  }
+
+  const setStatus = (ids: string[], status: CharacterStatus) => run(() => setCharacterStatus(ids, status))
+  const markApplied = (ids: string[]) => run(() => markChangesApplied(ids))
+  const pendingOf = (characterId: string) => pendingChanges.filter((c) => c.characterId === characterId)
+  const pendingByActor = (actorId: string | null) => {
+    const character = characters.find((c) => c.foundryActorId === actorId)
+    return character ? pendingOf(character.id).length : 0
+  }
+  const allIds = characters.map((c) => c.id)
+  const anyBetween = characters.some((c) => c.status === 'between_sessions')
+
   const players = profiles.filter((p) => p.role === 'player')
 
   return (
@@ -115,6 +142,13 @@ export function GmPage() {
                       {' '}
                       · {snapshotSizeKb(s)} КБ{s.computed ? '' : ' · без значений Foundry'}
                     </span>
+                    {pendingByActor(s.meta.actorId) > 0 && (
+                      <span className="error small">
+                        {' '}
+                        · {pendingByActor(s.meta.actorId)} правок ещё не отмечены применёнными: если ты не перенёс их в Foundry, они
+                        пропадут с листа
+                      </span>
+                    )}
                     {wrongVersion && (
                       <span className="error small">
                         {' '}
@@ -143,6 +177,15 @@ export function GmPage() {
 
       <h2 className="section-title">Персонажи</h2>
       {loadError && <p className="error">{loadError}</p>}
+      {characters.length > 0 && (
+        <button
+          type="button"
+          className={anyBetween ? 'btn btn-primary' : 'btn'}
+          onClick={() => setStatus(allIds, anyBetween ? 'in_game' : 'between_sessions')}
+        >
+          {anyBetween ? 'Начать игру: закрыть правки всем' : 'Игра окончена: открыть правки всем'}
+        </button>
+      )}
       {characters.length === 0 && !loadError && <p className="muted">Пока пусто. Загрузи первый снимок.</p>}
       <div className="attack-list">
         {characters.map((c) => (
@@ -156,6 +199,19 @@ export function GmPage() {
               </span>
             </div>
             <span className="muted small">Снимок: {formatDateTime(c.lastSnapshotAt)}</span>
+            <button
+              type="button"
+              className="toggle"
+              aria-pressed={c.status === 'in_game'}
+              onClick={() => setStatus([c.id], c.status === 'in_game' ? 'between_sessions' : 'in_game')}
+            >
+              {c.status === 'in_game' ? 'Открыть правки' : 'Закрыть правки (игра)'}
+            </button>
+            {pendingOf(c.id).length > 0 && (
+              <div className="card list" style={{ background: 'var(--surface-sunken)' }}>
+                <PendingChanges characterId={c.id} changes={pendingOf(c.id)} onMarkApplied={markApplied} />
+              </div>
+            )}
             <label className="field">
               Игрок
               <select className="select" value={c.ownerId ?? ''} onChange={(e) => changeOwner(c.id, e.target.value)}>
