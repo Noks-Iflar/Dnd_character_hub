@@ -46,6 +46,7 @@ export function StatusPage() {
         {result.state === 'ok' && `🟢 Supabase доступен (ответ за ${result.ms} мс).`}
         {result.state === 'error' && `🔴 Supabase недоступен. ${result.message}`}
       </p>
+      {supabaseUrl && <p>Адрес: {supabaseUrl}</p>}
       <p>
         Если видишь красный кружок, попробуй включить VPN и обновить страницу, и напиши мастеру.
       </p>
