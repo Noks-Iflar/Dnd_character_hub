@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { loadOffline, onlineOr, saveProfile } from './offline'
 import { supabase } from './supabase'
 
 export type UserRole = 'gm' | 'player'
@@ -12,7 +13,7 @@ export type Profile = {
 
 export type ProfileState =
   | { status: 'loading' }
-  | { status: 'ready'; profile: Profile }
+  | { status: 'ready'; profile: Profile; offline: boolean }
   | { status: 'error'; message: string }
 
 function isProfile(value: unknown): value is Profile {
@@ -33,22 +34,30 @@ export function useProfile(userId: string): ProfileState {
   useEffect(() => {
     if (!supabase) return
     let cancelled = false
-    supabase
-      .from('profiles')
-      .select('id, display_name, role, timezone')
-      .eq('id', userId)
-      .maybeSingle()
+    const db = supabase
+    onlineOr(() => db.from('profiles').select('id, display_name, role, timezone').eq('id', userId).maybeSingle())
       .then(({ data, error }) => {
         if (cancelled) return
-        if (error) {
-          const missing = /does not exist|schema cache/i.test(error.message)
-          setState({ status: 'error', message: missing ? 'Таблицы в базе ещё не созданы.' : error.message })
-        } else if (!isProfile(data)) {
-          setState({ status: 'error', message: 'Профиль не найден. Напиши мастеру.' })
+        if (!error && isProfile(data)) {
+          saveProfile(data)
+          setState({ status: 'ready', profile: data, offline: false })
+        } else if (error) {
+          fallback(error.message)
         } else {
-          setState({ status: 'ready', profile: data })
+          setState({ status: 'error', message: 'Профиль не найден. Напиши мастеру.' })
         }
       })
+      .catch((e: unknown) => !cancelled && fallback(e instanceof Error ? e.message : String(e)))
+
+    function fallback(message: string) {
+      const cached = loadOffline()
+      if (cached?.userId === userId && cached.profile) {
+        setState({ status: 'ready', profile: cached.profile, offline: true })
+      } else {
+        const missing = /does not exist|schema cache/i.test(message)
+        setState({ status: 'error', message: missing ? 'Таблицы в базе ещё не созданы.' : message })
+      }
+    }
     return () => {
       cancelled = true
     }
