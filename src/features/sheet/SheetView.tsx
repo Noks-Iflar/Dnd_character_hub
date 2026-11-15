@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { roll } from '../../lib/dice/dice'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
-import { ABILITY_LABEL, type Sheet, type SheetAttack } from '../../lib/snapshot/sheet'
+import type { ChangeValue } from '../../lib/snapshot/changes'
+import { itemPath } from '../../lib/snapshot/changes'
+import { ABILITY_LABEL, type Sheet, type SheetAttack, type SheetResource } from '../../lib/snapshot/sheet'
 import { Approx } from './Approx'
 import { d20, signed, statText } from './format'
 import { RollToast, type ShownRoll } from './RollToast'
+import { Stepper } from './Stepper'
 
 const COINS: [string, string][] = [
   ['pp', 'пм'],
@@ -53,8 +56,19 @@ function Description({ html }: { html: string }) {
   return <div className="description" dangerouslySetInnerHTML={{ __html: safe }} />
 }
 
-export function SheetView({ sheet }: { sheet: Sheet }) {
+/** Present when the sheet may be edited: records one edit in the journal. */
+export type SheetEdit = { set: (path: string, oldValue: ChangeValue | null, newValue: ChangeValue) => void }
+
+const EQUIPPABLE = new Set(['weapon', 'equipment'])
+
+export function SheetView({ sheet, edit }: { sheet: Sheet; edit?: SheetEdit }) {
   const [shown, setShown] = useState<ShownRoll | null>(null)
+
+  function setResource(r: SheetResource, remaining: number) {
+    if (!edit) return
+    const stored = (v: number) => (r.stores === 'spent' ? r.max - v : v)
+    edit.set(r.path, stored(r.value), stored(remaining))
+  }
 
   function rollD20(label: string, mod: number | null) {
     if (mod === null) return
@@ -104,6 +118,27 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
         <div className="hp-bar" aria-hidden="true">
           <div style={{ width: `${hpPercent}%` }} />
         </div>
+        {edit && (
+          <>
+            <div className="edit-row">
+              <span className="muted small">Текущие хиты</span>
+              <Stepper
+                label="Текущие хиты"
+                value={sheet.hp.value ?? 0}
+                max={hpMax ?? undefined}
+                onCommit={(v) => edit.set('system.attributes.hp.value', sheet.hp.value, v)}
+              />
+            </div>
+            <div className="edit-row">
+              <span className="muted small">Временные хиты</span>
+              <Stepper
+                label="Временные хиты"
+                value={sheet.hp.temp ?? 0}
+                onCommit={(v) => edit.set('system.attributes.hp.temp', sheet.hp.temp, v)}
+              />
+            </div>
+          </>
+        )}
         <div className="vital-grid">
           <div className="vital">
             <span className="big-number">
@@ -127,10 +162,67 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
             <span className="muted small">Скорость, фт</span>
           </div>
         </div>
-        <div className="muted small">
-          {sheet.inspiration ? 'Есть героическое вдохновение' : 'Нет вдохновения'}
-          {sheet.exhaustion ? ` · истощение ${sheet.exhaustion}` : ''}
-        </div>
+        {edit ? (
+          <>
+            <div className="edit-row">
+              <button
+                type="button"
+                className="toggle"
+                aria-pressed={sheet.inspiration}
+                onClick={() => edit.set('system.attributes.inspiration', sheet.inspiration, !sheet.inspiration)}
+              >
+                {sheet.inspiration ? 'Вдохновение есть' : 'Вдохновения нет'}
+              </button>
+            </div>
+            <div className="edit-row">
+              <span className="muted small">Истощение</span>
+              <Stepper
+                label="Истощение"
+                value={sheet.exhaustion}
+                max={6}
+                onCommit={(v) => edit.set('system.attributes.exhaustion', sheet.exhaustion, v)}
+              />
+            </div>
+            <div className="edit-row">
+              <span className="muted small">Спасброски от смерти: успехи</span>
+              <Stepper
+                label="Успехи спасбросков от смерти"
+                value={sheet.death.success}
+                max={3}
+                onCommit={(v) => edit.set('system.attributes.death.success', sheet.death.success, v)}
+              />
+            </div>
+            <div className="edit-row">
+              <span className="muted small">Спасброски от смерти: провалы</span>
+              <Stepper
+                label="Провалы спасбросков от смерти"
+                value={sheet.death.failure}
+                max={3}
+                onCommit={(v) => edit.set('system.attributes.death.failure', sheet.death.failure, v)}
+              />
+            </div>
+            {sheet.hitDice.map((hd) => (
+              <div key={hd.classId} className="edit-row">
+                <span className="muted small">
+                  Кости хитов {hd.denomination} ({hd.name}), осталось
+                </span>
+                <Stepper
+                  label={`Кости хитов ${hd.name}`}
+                  value={hd.total - hd.spent}
+                  max={hd.total}
+                  onCommit={(v) => edit.set(itemPath(hd.classId, 'hd.spent'), hd.spent, hd.total - v)}
+                />
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="muted small">
+            {sheet.inspiration ? 'Есть героическое вдохновение' : 'Нет вдохновения'}
+            {sheet.exhaustion ? ` · истощение ${sheet.exhaustion}` : ''}
+            {sheet.hitDice.length > 0 &&
+              ` · кости хитов ${sheet.hitDice.map((hd) => `${hd.total - hd.spent}/${hd.total}${hd.denomination}`).join(', ')}`}
+          </div>
+        )}
       </section>
 
       <h2 className="section-title">Характеристики</h2>
@@ -231,6 +323,7 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
               <div key={`${r.kind}.${r.id}`} className="list-row static">
                 <span className="grow">{r.name}</span>
                 <Pips value={r.value} max={r.max} />
+                {edit && <Stepper label={r.name} value={r.value} max={r.max} onCommit={(v) => setResource(r, v)} />}
               </div>
             ))}
           </div>
@@ -255,13 +348,28 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
       )}
 
       <h2 className="section-title">Снаряжение</h2>
-      <div className="card coins">
-        {COINS.map(([key, label]) => (
-          <span key={key}>
-            <span className="row-number">{sheet.currency[key] ?? 0}</span> <span className="muted small">{label}</span>
-          </span>
-        ))}
-      </div>
+      {edit ? (
+        <div className="card list">
+          {COINS.map(([key, label]) => (
+            <div key={key} className="list-row static">
+              <span className="grow">{label}</span>
+              <Stepper
+                label={`Монеты: ${label}`}
+                value={sheet.currency[key] ?? 0}
+                onCommit={(v) => edit.set(`system.currency.${key}`, sheet.currency[key] ?? 0, v)}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card coins">
+          {COINS.map(([key, label]) => (
+            <span key={key}>
+              <span className="row-number">{sheet.currency[key] ?? 0}</span> <span className="muted small">{label}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {sheet.inventory.length > 0 ? (
         <div className="card list">
           {sheet.inventory.map((it) => (
@@ -273,6 +381,25 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
                 </span>
                 {it.equipped && <span className="chip chip-tech">надето</span>}
               </summary>
+              {edit && (
+                <div className="edit-row" style={{ padding: '10px 14px 0' }}>
+                  {EQUIPPABLE.has(it.type) && (
+                    <button
+                      type="button"
+                      className="toggle"
+                      aria-pressed={it.equipped}
+                      onClick={() => edit.set(itemPath(it.id, 'equipped'), it.equipped, !it.equipped)}
+                    >
+                      {it.equipped ? 'Надето' : 'Не надето'}
+                    </button>
+                  )}
+                  <Stepper
+                    label={`Количество: ${it.name}`}
+                    value={it.quantity}
+                    onCommit={(v) => edit.set(itemPath(it.id, 'quantity'), it.quantity, v)}
+                  />
+                </div>
+              )}
               <Description html={it.description} />
             </details>
           ))}

@@ -1,6 +1,7 @@
 // Data access for characters and snapshots. RLS decides what each user sees.
 import { parseSnapshotJson } from './snapshot/parse'
 import { get, isObject, str, type JsonObject } from './snapshot/read'
+import type { Change, ChangeValue } from './snapshot/changes'
 import type { Snapshot } from './snapshot/types'
 import { supabase } from './supabase'
 import type { Profile } from './profile'
@@ -117,11 +118,13 @@ export async function uploadSnapshots(snapshots: Snapshot[]): Promise<UploadResu
   return results
 }
 
+export type StoredSnapshot = { id: string; snapshot: Snapshot; createdAt: string }
+
 /** Latest snapshot of a character, parsed and validated. */
-export async function latestSnapshot(characterId: string): Promise<{ snapshot: Snapshot; createdAt: string } | null> {
+export async function latestSnapshot(characterId: string): Promise<StoredSnapshot | null> {
   const { data, error } = await client()
     .from('snapshots')
-    .select('data, created_at')
+    .select('id, data, created_at')
     .eq('character_id', characterId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -130,7 +133,58 @@ export async function latestSnapshot(characterId: string): Promise<{ snapshot: S
   if (!data) return null
   const parsed = parseSnapshotJson(JSON.stringify(get(data, 'data')))
   if (!parsed.ok || !parsed.snapshots[0]) throw new Error(`Снимок повреждён: ${parsed.ok ? 'пусто' : parsed.error}`)
-  return { snapshot: parsed.snapshots[0], createdAt: str(get(data, 'created_at')) ?? '' }
+  return { id: str(get(data, 'id')) ?? '', snapshot: parsed.snapshots[0], createdAt: str(get(data, 'created_at')) ?? '' }
+}
+
+export async function getCharacter(id: string): Promise<Character | null> {
+  const { data, error } = await client().from('characters').select('id, name, owner_id, foundry_actor_id, status').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  return toCharacter(data)
+}
+
+const changeValue = (v: unknown): ChangeValue | null => (typeof v === 'number' || typeof v === 'boolean' ? v : null)
+
+function toChange(row: unknown): Change | null {
+  if (!isObject(row)) return null
+  const id = str(row.id)
+  const path = str(row.path)
+  const newValue = changeValue(row.new_value)
+  const createdAt = str(row.created_at)
+  if (!id || !path || newValue === null || !createdAt) return null
+  return { id, path, oldValue: changeValue(row.old_value), newValue, createdAt, appliedAt: str(row.applied_at) }
+}
+
+/** Edits made on top of one snapshot, oldest first. */
+export async function listChanges(snapshotId: string): Promise<Change[]> {
+  const { data, error } = await client()
+    .from('changes')
+    .select('id, path, old_value, new_value, created_at, applied_at')
+    .eq('snapshot_id', snapshotId)
+    .order('created_at')
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(toChange).filter((c): c is Change => c !== null)
+}
+
+function describeWriteError(message: string): string {
+  if (/row-level security/i.test(message)) return 'Правка не принята: персонаж сейчас в игре или это не твой персонаж.'
+  return message
+}
+
+export async function addChange(input: {
+  characterId: string
+  snapshotId: string
+  path: string
+  oldValue: ChangeValue | null
+  newValue: ChangeValue
+}): Promise<void> {
+  const { error } = await client().from('changes').insert({
+    character_id: input.characterId,
+    snapshot_id: input.snapshotId,
+    path: input.path,
+    old_value: input.oldValue,
+    new_value: input.newValue,
+  })
+  if (error) throw new Error(describeWriteError(error.message))
 }
 
 export const snapshotSizeKb = (snapshot: Snapshot): number => Math.round(JSON.stringify(toStoredSnapshot(snapshot)).length / 1024)
