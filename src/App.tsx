@@ -8,20 +8,33 @@ import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
 import { listCharacters, type Character } from './lib/db'
 import { formatDateTime } from './lib/format-date'
+import { clearOffline, isOffline, loadOffline, onlineOr, saveCharacters } from './lib/offline'
 import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
 
 const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
 
-function MyCharacters({ isGm }: { isGm: boolean }) {
+function MyCharacters({ isGm, userId }: { isGm: boolean; userId: string }) {
   const [characters, setCharacters] = useState<Character[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [offline, setOffline] = useState(false)
 
   useEffect(() => {
-    listCharacters()
-      .then(setCharacters)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-  }, [])
+    onlineOr(listCharacters)
+      .then((list) => {
+        saveCharacters(userId, list)
+        setCharacters(list)
+      })
+      .catch((e: unknown) => {
+        const cached = loadOffline()
+        if (cached?.userId === userId && cached.characters.length) {
+          setCharacters(cached.characters)
+          setOffline(true)
+        } else {
+          setError(e instanceof Error ? e.message : String(e))
+        }
+      })
+  }, [userId])
 
   if (error) return <p className="error">{error}</p>
   if (!characters) return <p className="muted">Загружаю персонажей…</p>
@@ -36,6 +49,7 @@ function MyCharacters({ isGm }: { isGm: boolean }) {
   }
   return (
     <div className="attack-list">
+      {offline && <p className="chip chip-tech">Нет связи: показаны сохранённые персонажи</p>}
       {characters.map((c) => (
         <Link key={c.id} to={`/character/${c.id}`} className="card character-card">
           <span className="row-number">{c.name}</span>
@@ -53,7 +67,14 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
     <>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="brand">Dnd Hub</span>
-        <button className="btn" style={{ minHeight: 40 }} onClick={() => supabase?.auth.signOut()}>
+        <button
+          className="btn"
+          style={{ minHeight: 40 }}
+          onClick={() => {
+            clearOffline()
+            void supabase?.auth.signOut()
+          }}
+        >
           Выйти
         </button>
       </header>
@@ -71,6 +92,10 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
         <span className="muted small">{email}</span>
       </div>
 
+      {profile.status === 'ready' && profile.offline && (
+        <p className="chip chip-tech">Нет связи с сервером: офлайн-режим, только просмотр</p>
+      )}
+
       {isGm && (
         <Link className="btn btn-primary" to="/gm">
           Экран мастера
@@ -78,7 +103,7 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
       )}
 
       <h2 className="section-title">{isGm ? 'Все персонажи' : 'Мои персонажи'}</h2>
-      {profile.status === 'ready' && <MyCharacters isGm={isGm} />}
+      {profile.status === 'ready' && <MyCharacters isGm={isGm} userId={userId} />}
 
       <Link className="btn" to="/sheet">
         Открыть лист из файла
@@ -94,14 +119,16 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
 function RequireAuth() {
   const auth = useAuth()
   if (auth.status === 'loading') return <p className="muted">Загрузка…</p>
-  if (auth.status === 'signed-out') return <LoginPage />
-  return <Outlet context={auth.session} />
+  // Offline and signed out (e.g. the session could not be refreshed): show the saved copy.
+  if (auth.status === 'signed-out') return isOffline() && loadOffline() ? <Outlet /> : <LoginPage />
+  return <Outlet />
 }
 
 function HomeRoute() {
   const auth = useAuth()
-  if (auth.status !== 'signed-in') return null
-  return <Home userId={auth.session.user.id} email={auth.session.user.email} />
+  if (auth.status === 'signed-in') return <Home userId={auth.session.user.id} email={auth.session.user.email} />
+  const cached = loadOffline()
+  return cached ? <Home userId={cached.userId} email={undefined} /> : null
 }
 
 function App() {
