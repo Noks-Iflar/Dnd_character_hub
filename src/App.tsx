@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, Outlet, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
 import { CharacterPage } from './features/character/CharacterPage'
+import { HistoryPage } from './features/character/HistoryPage'
+import { VersionPage } from './features/character/VersionPage'
 import { GmPage } from './features/gm-dashboard/GmPage'
 import { SheetPage } from './features/sheet/SheetPage'
 import { StatusPage } from './features/status/StatusPage'
@@ -161,6 +163,8 @@ function App() {
         <Route element={<RequireAuth />}>
           <Route path="/gm" element={<GmPage />} />
           <Route path="/character/:id" element={<CharacterPage />} />
+          <Route path="/character/:id/history" element={<HistoryPage />} />
+          <Route path="/character/:id/v/:snapshotId" element={<VersionPage />} />
           <Route path="*" element={<HomeRoute />} />
         </Route>
       </Routes>

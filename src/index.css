@@ -1209,3 +1209,14 @@ details.card.nested > summary::-webkit-details-marker {
 .notes-text:focus {
   border-color: var(--accent-border);
 }
+
+.version-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+.version-card:hover {
+  border-color: var(--line-strong);
+}

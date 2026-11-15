@@ -128,7 +128,10 @@ export function CharacterPage() {
       )}
       {state.status === 'online' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="muted small">Снимок из Foundry от {formatDateTime(state.base.createdAt)}</span>
+          <span className="muted small">
+            Снимок из Foundry от {formatDateTime(state.base.createdAt)} ·{' '}
+            <Link to={`/character/${id}/history`}>история версий</Link>
+          </span>
           {inGame ? (
             <span className="chip chip-blood">Идёт игра: правки закрыты до следующего снимка</span>
           ) : (
