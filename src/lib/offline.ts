@@ -13,6 +13,7 @@ export type OfflineData = {
   profile: Profile | null
   characters: Character[]
   snapshots: Record<string, SavedSnapshot>
+  notes?: Record<string, string>
 }
 
 function read(): OfflineData | null {
@@ -62,6 +63,16 @@ export function saveCharacters(userId: string, characters: Character[]): void {
 export function saveSnapshot(userId: string, characterId: string, data: unknown, createdAt: string): void {
   const current = forUser(userId)
   write({ ...current, snapshots: { ...current.snapshots, [characterId]: { data, createdAt, savedAt: new Date().toISOString() } } })
+}
+
+export function saveNotesOffline(userId: string, characterId: string, body: string): void {
+  const current = forUser(userId)
+  write({ ...current, notes: { ...current.notes, [characterId]: body } })
+}
+
+export function offlineNotes(characterId: string): string | null {
+  const body = read()?.notes?.[characterId]
+  return typeof body === 'string' ? body : null
 }
 
 export function offlineSnapshot(characterId: string): SavedSnapshot | null {

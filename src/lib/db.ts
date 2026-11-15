@@ -220,3 +220,18 @@ export async function markChangesApplied(changeIds: string[]): Promise<void> {
   const { error } = await client().from('changes').update({ applied_at: new Date().toISOString() }).in('id', changeIds)
   if (error) throw new Error(error.message)
 }
+
+export type CharacterNotes = { body: string; updatedAt: string | null }
+
+export async function getNotes(characterId: string): Promise<CharacterNotes> {
+  const { data, error } = await client().from('character_notes').select('body, updated_at').eq('character_id', characterId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return { body: str(get(data, 'body')) ?? '', updatedAt: str(get(data, 'updated_at')) }
+}
+
+export async function saveNotes(characterId: string, userId: string, body: string): Promise<void> {
+  const { error } = await client()
+    .from('character_notes')
+    .upsert({ character_id: characterId, body, updated_by: userId, updated_at: new Date().toISOString() }, { onConflict: 'character_id' })
+  if (error) throw new Error(describeWriteError(error.message))
+}

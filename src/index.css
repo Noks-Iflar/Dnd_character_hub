@@ -1187,3 +1187,25 @@ details.card.nested > summary {
 details.card.nested > summary::-webkit-details-marker {
   display: none;
 }
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.notes-text {
+  min-height: 220px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  resize: vertical;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.notes-text:focus {
+  border-color: var(--accent-border);
+}

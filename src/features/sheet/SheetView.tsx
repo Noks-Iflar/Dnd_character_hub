@@ -3,6 +3,7 @@ import { roll } from '../../lib/dice/dice'
 import type { Sheet, SheetAttack, SheetResource } from '../../lib/snapshot/sheet'
 import { d20 } from './format'
 import { RollToast, type ShownRoll } from './RollToast'
+import type { NotesBinding } from './NotesEditor'
 import type { RollMode, SheetEdit, TabProps } from './sheet-ui'
 import { CombatTab } from './tabs/CombatTab'
 import { GearTab } from './tabs/GearTab'
@@ -71,7 +72,7 @@ const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
 const MODE_SUFFIX: Record<RollMode, string> = { normal: '', adv: ' (преимущество)', dis: ' (помеха)' }
 
 /** Character sheet with tabs and a bottom menu. With `edit`, allowed fields can be changed. */
-export function SheetView({ sheet, edit }: { sheet: Sheet; edit?: SheetEdit }) {
+export function SheetView({ sheet, edit, notes }: { sheet: Sheet; edit?: SheetEdit; notes?: NotesBinding }) {
   const [tab, setTab] = useState<TabId>('main')
   const [mode, setMode] = useState<RollMode>('normal')
   const [shown, setShown] = useState<ShownRoll | null>(null)
@@ -106,7 +107,7 @@ export function SheetView({ sheet, edit }: { sheet: Sheet; edit?: SheetEdit }) {
       {tab === 'combat' && <CombatTab {...props} mode={mode} onMode={setMode} />}
       {tab === 'magic' && <MagicTab {...props} />}
       {tab === 'gear' && <GearTab {...props} />}
-      {tab === 'notes' && <NotesTab {...props} />}
+      {tab === 'notes' && <NotesTab {...props} notes={notes} />}
 
       <div className="bottom-nav-spacer" aria-hidden="true" />
       <RollToast roll={shown} onClose={() => setShown(null)} />
