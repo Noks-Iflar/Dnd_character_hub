@@ -10,7 +10,8 @@ export function statText(stat: Stat, withSign = false): string {
   return withSign ? signed(stat.value) : String(stat.value)
 }
 
-/** Dice formula for a d20 roll with a modifier, e.g. "1d20+3" or "1d20-1". */
-export function d20(mod: number): string {
-  return mod >= 0 ? `1d20+${mod}` : `1d20-${Math.abs(mod)}`
+/** Dice formula for a d20 roll: "1d20+3", with advantage "2d20kh+3", with disadvantage "2d20kl-1". */
+export function d20(mod: number, mode: 'normal' | 'adv' | 'dis' = 'normal'): string {
+  const dice = mode === 'adv' ? '2d20kh' : mode === 'dis' ? '2d20kl' : '1d20'
+  return mod >= 0 ? `${dice}+${mod}` : `${dice}-${Math.abs(mod)}`
 }

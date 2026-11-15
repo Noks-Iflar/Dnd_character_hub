@@ -928,3 +928,159 @@ button.attack-btn:hover {
 .subtitle {
   font-size: 22px;
 }
+
+/* ---- sheet tabs (design handoff) ---- */
+
+.bottom-nav {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 6px 4px calc(10px + env(safe-area-inset-bottom));
+  background: var(--nav-bg);
+  border-top: 1px solid var(--line);
+}
+.bottom-nav button {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+/* Active tab: bold label with a red brush underline */
+.bottom-nav button[aria-current='page'] {
+  color: var(--text);
+  font-weight: 700;
+}
+.bottom-nav button[aria-current='page']::after {
+  content: '';
+  width: 38px;
+  height: 6px;
+  background-color: var(--blood);
+  -webkit-mask: url('/ui/masks/stroke-thin.webp') center / 100% 100% no-repeat;
+  mask: url('/ui/masks/stroke-thin.webp') center / 100% 100% no-repeat;
+}
+.bottom-nav-spacer {
+  height: 64px;
+}
+
+.roll-toast {
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 11;
+}
+
+.sheet-header.compact {
+  gap: 12px;
+}
+.name-small {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+/* Section title with a link on the right: title, brush, link */
+.section-title-text {
+  font: inherit;
+  letter-spacing: inherit;
+}
+.section-title::after {
+  order: 1;
+}
+.section-link {
+  order: 2;
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  margin-right: -8px;
+}
+
+/* Segmented control: roll mode */
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+}
+.segmented button {
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-small1);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.damage-number {
+  color: var(--blood-text);
+}
+.count {
+  min-width: 36px;
+  text-align: right;
+}
+
+.art-header-banner {
+  height: 176px;
+  margin: 0 -16px;
+}
+.slot-tile {
+  gap: 6px;
+}
+.spell-level {
+  padding: 8px 14px 2px;
+  font-family: var(--font-caps);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--magic-text);
+}
+.spell-name {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+.conc-badge {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--magic);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--magic-text);
+}
+.pip {
+  border-color: var(--magic);
+}
+.pip.full {
+  background: var(--magic);
+}
+.hint {
+  border-style: dashed;
+  border-color: var(--tech-border);
+}
+/* The roll result floats over content: card colour on a solid page colour */
+.roll-toast {
+  background: linear-gradient(var(--surface), var(--surface)), var(--bg);
+}

@@ -43,7 +43,18 @@ export type SheetAbility = { key: AbilityKey; label: string; score: number | nul
 export type SheetSkill = { key: string; label: string; ability: AbilityKey; total: Stat; passive: Stat; proficiency: number }
 export type SheetClass = { name: string; levels: number; subclass: string | null }
 export type SheetItem = { id: string; name: string; type: string; quantity: number; equipped: boolean; description: string }
-export type SheetSpell = { id: string; name: string; level: number; prepared: number; description: string }
+export type SheetSpell = {
+  id: string
+  name: string
+  level: number
+  prepared: number
+  description: string
+  /** Foundry labels as they are (English or translated by the Russian module) */
+  activation: string | null
+  range: string | null
+  duration: string | null
+  concentration: boolean
+}
 export type SheetFeature = { id: string; name: string; description: string }
 export type SheetDamage = { formula: string; type: string | null }
 export type SheetAttack = {
@@ -91,7 +102,7 @@ export type Sheet = {
   resources: SheetResource[]
   hitDice: SheetHitDice[]
   death: { success: number; failure: number }
-  spellcasting: { dc: number; attack: number } | null
+  spellcasting: { dc: number; attack: number; ability: AbilityKey | null } | null
   hasComputed: boolean
 }
 
@@ -226,6 +237,12 @@ function resources(computed: JsonObject | null, source: JsonObject): SheetResour
   return out
 }
 
+function spellLabels(computed: JsonObject | null, itemId: string): Pick<SheetSpell, 'activation' | 'range' | 'duration'> {
+  const item = arr(get(computed, 'items')).find((i) => isObject(i) && i.id === itemId)
+  const labels = get(item, 'labels')
+  return { activation: str(get(labels, 'activation')), range: str(get(labels, 'range')), duration: str(get(labels, 'duration')) }
+}
+
 export type BuildOptions = { editedPaths?: ReadonlySet<string> }
 
 export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Sheet {
@@ -331,6 +348,8 @@ export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Shee
         level: num(get(i, 'system', 'level')) ?? 0,
         prepared: num(get(i, 'system', 'prepared')) ?? 0,
         description: description(i),
+        ...spellLabels(c, str(i._id) ?? ''),
+        concentration: arr(get(i, 'system', 'properties')).includes('concentration'),
       }))
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)),
     features: all
@@ -353,7 +372,9 @@ export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Shee
       const dc = num(get(c, 'spell', 'dc'))
       const attack = num(get(c, 'spell', 'attack'))
       const caster = all.some((i) => i.type === 'spell') || str(get(sys, 'attributes', 'spellcasting'))
-      return dc !== null && attack !== null && caster ? { dc, attack } : null
+      const abilityRaw = str(get(sys, 'attributes', 'spellcasting'))
+      const ability = (ABILITIES as readonly string[]).includes(abilityRaw ?? '') ? (abilityRaw as AbilityKey) : null
+      return dc !== null && attack !== null && caster ? { dc, attack, ability } : null
     })(),
     hasComputed: c !== null,
   }
