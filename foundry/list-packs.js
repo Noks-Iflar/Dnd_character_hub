@@ -31,7 +31,7 @@
       };
       if (pack.documentName === 'Item') {
         const index = await pack.getIndex({ fields: ['type', 'system.type.value', 'system.rarity'] });
-        for (const e of index) entry.types[e.type] = (entry.types[e.type] ?? 0) + 1;
+        for (const e of index.values()) entry.types[e.type] = (entry.types[e.type] ?? 0) + 1;
         // A few full documents: shows whether names and descriptions come translated
         const docs = await pack.getDocuments({ _id__in: [...index.keys()].slice(0, SAMPLE) }).catch(() => []);
         entry.sample = docs.map((d) => ({
