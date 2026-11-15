@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { ThemeToggle } from '../../components/ThemeToggle'
 import { supabase } from '../../lib/supabase'
 
 /** Maps Supabase auth errors to messages for players. */
@@ -40,9 +41,20 @@ export function LoginPage() {
 
   return (
     <>
-      <div style={{ marginTop: 24 }}>
-        <h1 style={{ fontSize: 46 }}>Dnd Hub</h1>
+      <div className="art-header art-header-tall">
+        <img src={`${import.meta.env.BASE_URL}ui/art/login.jpg`} alt="Четверо путников на холме под луной" style={{ objectPosition: '30% center' }} />
+        <div className="art-header-bar">
+          <span />
+          <ThemeToggle />
+        </div>
+      </div>
+      <div className="art-title">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={`${import.meta.env.BASE_URL}ui/d20.webp`} alt="" width={48} height={48} />
+          <h1 className="hero-title">Dnd Hub</h1>
+        </div>
         <span className="subtitle">Кампания «Хвор»</span>
+        <span className="brush-underline" style={{ width: 200, height: 14 }} />
       </div>
 
       <form className="form" onSubmit={onSubmit}>
@@ -76,15 +88,17 @@ export function LoginPage() {
         </button>
       </form>
 
-      <p className="muted" style={{ textAlign: 'center', fontSize: 14 }}>
+      <p className="muted small" style={{ textAlign: 'center', margin: 0 }}>
         Аккаунты создаёт мастер. Забыл пароль — напиши мастеру.
       </p>
-      <Link to="/sheet" style={{ alignSelf: 'center', fontSize: 15 }}>
-        Открыть лист из файла без входа
-      </Link>
-      <Link to="/status" style={{ alignSelf: 'center', fontSize: 14 }}>
-        Проверка доступа
-      </Link>
+      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 4 }}>
+        <Link className="text-btn" to="/sheet">
+          Лист из файла без входа
+        </Link>
+        <Link className="text-btn" to="/status">
+          Проверка доступа
+        </Link>
+      </div>
     </>
   )
 }

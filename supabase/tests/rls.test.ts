@@ -137,3 +137,109 @@ describe('snapshots', () => {
     expect(await runAs(snapDb, null, 'select id from public.snapshots')).toEqual({ ok: true, rows: [] })
   })
 })
+
+describe('changes', () => {
+  let cdb: PGlite
+  let velian = ''
+  let kairen = ''
+  let velianSnap = ''
+  let kairenSnap = ''
+  const ITEM = 'abcdefghij012345'
+
+  const insert = (uid: string, character: string, snapshot: string, path: string, value: string) =>
+    runAs(
+      cdb,
+      uid,
+      `insert into public.changes (character_id, snapshot_id, path, old_value, new_value) values ('${character}', '${snapshot}', '${path}', '0', '${value}') returning id`,
+    )
+
+  beforeAll(async () => {
+    cdb = await createDb()
+    await cdb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const chars = await runAs(
+      cdb,
+      GM,
+      `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1'), ('${P2}', 'Kairen', 'a2') returning id, name`,
+    )
+    if (!chars.ok) throw new Error(chars.error)
+    velian = String(chars.rows.find((r) => r.name === 'Velian')?.id)
+    kairen = String(chars.rows.find((r) => r.name === 'Kairen')?.id)
+    const snaps = await runAs(
+      cdb,
+      GM,
+      `insert into public.snapshots (character_id, data) values ('${velian}', '{}'), ('${kairen}', '{}') returning id, character_id`,
+    )
+    if (!snaps.ok) throw new Error(snaps.error)
+    velianSnap = String(snaps.rows.find((r) => r.character_id === velian)?.id)
+    kairenSnap = String(snaps.rows.find((r) => r.character_id === kairen)?.id)
+  })
+
+  it('owner edits allowed fields of own character between sessions', async () => {
+    for (const [path, value] of [
+      ['system.attributes.hp.value', '22'],
+      ['system.attributes.inspiration', 'false'],
+      ['system.spells.spell1.value', '1'],
+      ['system.currency.gp', '15'],
+      [`items.${ITEM}.system.uses.spent`, '1'],
+      [`items.${ITEM}.system.equipped`, 'true'],
+    ]) {
+      const r = await insert(P1, velian, velianSnap, String(path), String(value))
+      expect(r.ok, `${path}: ${r.ok ? '' : r.error}`).toBe(true)
+    }
+  })
+
+  it('rejects fields outside the allowed list', async () => {
+    for (const path of ['system.abilities.str.value', 'system.attributes.hp.max', 'items.short.system.quantity', 'name']) {
+      expect((await insert(P1, velian, velianSnap, path, '99')).ok, path).toBe(false)
+    }
+  })
+
+  it('rejects non-number, non-boolean values', async () => {
+    expect((await insert(P1, velian, velianSnap, 'system.currency.gp', '"lots"')).ok).toBe(false)
+  })
+
+  it("player cannot edit someone else's character or use its snapshot", async () => {
+    expect((await insert(P1, kairen, kairenSnap, 'system.currency.gp', '1')).ok).toBe(false)
+    expect((await insert(P1, velian, kairenSnap, 'system.currency.gp', '1')).ok).toBe(false)
+  })
+
+  it('player cannot write as another author or pre-mark as applied', async () => {
+    const r1 = await runAs(
+      cdb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, path, new_value, author_id) values ('${velian}', '${velianSnap}', 'system.currency.gp', '1', '${P2}')`,
+    )
+    expect(r1.ok).toBe(false)
+    const r2 = await runAs(
+      cdb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, path, new_value, applied_at) values ('${velian}', '${velianSnap}', 'system.currency.gp', '1', now())`,
+    )
+    expect(r2.ok).toBe(false)
+  })
+
+  it('edits are locked while the character is in game, except for the gm', async () => {
+    await runAs(cdb, GM, `update public.characters set status = 'in_game' where id = '${velian}'`)
+    expect((await insert(P1, velian, velianSnap, 'system.currency.gp', '2')).ok).toBe(false)
+    expect((await insert(GM, velian, velianSnap, 'system.currency.gp', '2')).ok).toBe(true)
+    await runAs(cdb, GM, `update public.characters set status = 'between_sessions' where id = '${velian}'`)
+  })
+
+  it('players see only edits of own character', async () => {
+    await insert(P2, kairen, kairenSnap, 'system.currency.sp', '3')
+    const r = await runAs(cdb, P1, 'select distinct character_id from public.changes')
+    expect(r).toEqual({ ok: true, rows: [{ character_id: velian }] })
+  })
+
+  it('only the gm marks edits applied; nobody rewrites or deletes them', async () => {
+    expect(await runAs(cdb, P1, 'update public.changes set applied_at = now() returning id')).toEqual({ ok: true, rows: [] })
+    const applied = await runAs(cdb, GM, `update public.changes set applied_at = now() where character_id = '${velian}' returning id`)
+    expect(applied.ok && applied.rows.length).toBeGreaterThan(0)
+    expect((await runAs(cdb, GM, `update public.changes set new_value = '5'`)).ok).toBe(false)
+    expect((await runAs(cdb, GM, 'delete from public.changes')).ok).toBe(false)
+    expect((await runAs(cdb, P1, 'delete from public.changes')).ok).toBe(false)
+  })
+})

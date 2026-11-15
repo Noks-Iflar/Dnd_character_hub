@@ -43,7 +43,18 @@ export type SheetAbility = { key: AbilityKey; label: string; score: number | nul
 export type SheetSkill = { key: string; label: string; ability: AbilityKey; total: Stat; passive: Stat; proficiency: number }
 export type SheetClass = { name: string; levels: number; subclass: string | null }
 export type SheetItem = { id: string; name: string; type: string; quantity: number; equipped: boolean; description: string }
-export type SheetSpell = { id: string; name: string; level: number; prepared: number; description: string }
+export type SheetSpell = {
+  id: string
+  name: string
+  level: number
+  prepared: number
+  description: string
+  /** Foundry labels as they are (English or translated by the Russian module) */
+  activation: string | null
+  range: string | null
+  duration: string | null
+  concentration: boolean
+}
 export type SheetFeature = { id: string; name: string; description: string }
 export type SheetDamage = { formula: string; type: string | null }
 export type SheetAttack = {
@@ -55,7 +66,17 @@ export type SheetAttack = {
   damages: SheetDamage[]
   range: string | null
 }
-export type SheetResource = { id: string; name: string; value: number; max: number; kind: 'uses' | 'slot' }
+/** A spendable resource. `path` is where the edit goes; for 'spent' paths the stored number is max - remaining. */
+export type SheetResource = {
+  id: string
+  name: string
+  value: number
+  max: number
+  kind: 'uses' | 'slot'
+  path: string
+  stores: 'spent' | 'remaining'
+}
+export type SheetHitDice = { classId: string; name: string; denomination: string; total: number; spent: number }
 
 export type Sheet = {
   name: string
@@ -79,11 +100,18 @@ export type Sheet = {
   features: SheetFeature[]
   attacks: SheetAttack[]
   resources: SheetResource[]
-  spellcasting: { dc: number; attack: number } | null
+  hitDice: SheetHitDice[]
+  death: { success: number; failure: number }
+  spellcasting: { dc: number; attack: number; ability: AbilityKey | null } | null
   hasComputed: boolean
 }
 
 const foundry = (value: number | null): Stat => ({ value, from: 'foundry' })
+
+function acStat(stat: Stat, editedPaths: ReadonlySet<string> | undefined): Stat {
+  const gearEdited = [...(editedPaths ?? [])].some((p) => /\.system\.(equipped|quantity)$/.test(p))
+  return gearEdited && stat.value !== null ? { ...stat, from: 'estimate' } : stat
+}
 const estimate = (value: number | null): Stat => ({ value, from: 'estimate' })
 
 /** Prefer the Foundry value; fall back to a local estimate. */
@@ -173,13 +201,29 @@ function computedAttacks(computed: JsonObject | null): SheetAttack[] {
   return out
 }
 
-/** Limited uses of features and items, plus spell slots, from Foundry values. */
-function computedResources(computed: JsonObject | null): SheetResource[] {
+/**
+ * Limited uses of features and items, plus spell slots. The maximum comes from
+ * Foundry (it is often a formula); the current amount comes from the source,
+ * because that is what player edits change.
+ */
+function resources(computed: JsonObject | null, source: JsonObject): SheetResource[] {
   const out: SheetResource[] = []
+  const sourceItems = arr(source.items).filter(isObject)
   for (const item of arr(get(computed, 'items')).filter(isObject)) {
     const max = num(get(item, 'uses', 'max'))
     if (max === null || max <= 0) continue
-    out.push({ id: str(item.id) ?? '', name: str(item.name) ?? '', value: num(get(item, 'uses', 'value')) ?? 0, max, kind: 'uses' })
+    const id = str(item.id) ?? ''
+    const sourceItem = sourceItems.find((i) => i._id === id)
+    const spent = num(get(sourceItem, 'system', 'uses', 'spent')) ?? max - (num(get(item, 'uses', 'value')) ?? max)
+    out.push({
+      id,
+      name: str(item.name) ?? '',
+      value: Math.max(0, Math.min(max, max - spent)),
+      max,
+      kind: 'uses',
+      path: `items.${id}.system.uses.spent`,
+      stores: 'spent',
+    })
   }
   const slots = get(computed, 'spellSlots')
   for (const [key, slot] of Object.entries(isObject(slots) ? slots : {})) {
@@ -187,12 +231,21 @@ function computedResources(computed: JsonObject | null): SheetResource[] {
     if (max === null || max <= 0) continue
     const level = num(get(slot, 'level'))
     const name = key === 'pact' ? `Ячейки договора (${level ?? '?'} круг)` : `Ячейки ${level ?? key.replace('spell', '')} круга`
-    out.push({ id: key, name, value: num(get(slot, 'value')) ?? 0, max, kind: 'slot' })
+    const value = num(get(source, 'system', 'spells', key, 'value')) ?? num(get(slot, 'value')) ?? 0
+    out.push({ id: key, name, value: Math.max(0, Math.min(max, value)), max, kind: 'slot', path: `system.spells.${key}.value`, stores: 'remaining' })
   }
   return out
 }
 
-export function buildSheet(snapshot: Snapshot): Sheet {
+function spellLabels(computed: JsonObject | null, itemId: string): Pick<SheetSpell, 'activation' | 'range' | 'duration'> {
+  const item = arr(get(computed, 'items')).find((i) => isObject(i) && i.id === itemId)
+  const labels = get(item, 'labels')
+  return { activation: str(get(labels, 'activation')), range: str(get(labels, 'range')), duration: str(get(labels, 'duration')) }
+}
+
+export type BuildOptions = { editedPaths?: ReadonlySet<string> }
+
+export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Sheet {
   const src = snapshot.source
   const sys = isObject(src.system) ? src.system : {}
   const c = snapshot.computed
@@ -263,11 +316,13 @@ export function buildSheet(snapshot: Snapshot): Sheet {
     level,
     prof,
     hp: {
-      value: num(get(c, 'hp', 'value')) ?? num(get(sys, 'attributes', 'hp', 'value')),
+      // Current and temporary HP are editable: the source holds the latest value
+      value: num(get(sys, 'attributes', 'hp', 'value')) ?? num(get(c, 'hp', 'value')),
       max: pick(get(c, 'hp', 'max'), num(get(sys, 'attributes', 'hp', 'max')) ?? estimateMaxHp(classItems, conMod, level)),
-      temp: num(get(c, 'hp', 'temp')) ?? num(get(sys, 'attributes', 'hp', 'temp')),
+      temp: num(get(sys, 'attributes', 'hp', 'temp')) ?? num(get(c, 'hp', 'temp')),
     },
-    ac: pick(get(c, 'ac'), num(get(sys, 'attributes', 'ac', 'flat'))),
+    // Equipping or dropping items can change AC; Foundry recalculates it when edits are applied
+    ac: acStat(pick(get(c, 'ac'), num(get(sys, 'attributes', 'ac', 'flat'))), options.editedPaths),
     init: pick(get(c, 'init'), modOf('dex')),
     speed: pick(computedWalk, walk),
     inspiration: bool(get(sys, 'attributes', 'inspiration')),
@@ -293,18 +348,33 @@ export function buildSheet(snapshot: Snapshot): Sheet {
         level: num(get(i, 'system', 'level')) ?? 0,
         prepared: num(get(i, 'system', 'prepared')) ?? 0,
         description: description(i),
+        ...spellLabels(c, str(i._id) ?? ''),
+        concentration: arr(get(i, 'system', 'properties')).includes('concentration'),
       }))
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)),
     features: all
       .filter((i) => i.type === 'feat')
       .map((i) => ({ id: str(i._id) ?? '', name: str(i.name) ?? '', description: description(i) })),
     attacks: computedAttacks(c),
-    resources: computedResources(c),
+    resources: resources(c, src),
+    hitDice: classItems.map((cls) => ({
+      classId: str(cls._id) ?? '',
+      name: str(cls.name) ?? '',
+      denomination: str(get(cls, 'system', 'hd', 'denomination')) ?? '',
+      total: num(get(cls, 'system', 'levels')) ?? 0,
+      spent: num(get(cls, 'system', 'hd', 'spent')) ?? 0,
+    })),
+    death: {
+      success: num(get(sys, 'attributes', 'death', 'success')) ?? 0,
+      failure: num(get(sys, 'attributes', 'death', 'failure')) ?? 0,
+    },
     spellcasting: (() => {
       const dc = num(get(c, 'spell', 'dc'))
       const attack = num(get(c, 'spell', 'attack'))
       const caster = all.some((i) => i.type === 'spell') || str(get(sys, 'attributes', 'spellcasting'))
-      return dc !== null && attack !== null && caster ? { dc, attack } : null
+      const abilityRaw = str(get(sys, 'attributes', 'spellcasting'))
+      const ability = (ABILITIES as readonly string[]).includes(abilityRaw ?? '') ? (abilityRaw as AbilityKey) : null
+      return dc !== null && attack !== null && caster ? { dc, attack, ability } : null
     })(),
     hasComputed: c !== null,
   }

@@ -10,7 +10,7 @@ export default defineConfig({
     VitePWA({
       // New versions install silently and apply on the next app start
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'Dnd Hub',
         short_name: 'Dnd Hub',
@@ -19,8 +19,8 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
-        background_color: '#111113',
-        theme_color: '#111113',
+        background_color: '#18171a',
+        theme_color: '#18171a',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -29,7 +29,7 @@ export default defineConfig({
       },
       workbox: {
         // Cache the app shell; Supabase data will get its own offline handling in phase 3
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,woff2}'],
       },
     }),
   ],

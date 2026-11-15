@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { AppHeader } from '../../components/AppHeader'
 import { supabaseAnonKey, supabaseUrl } from '../../lib/supabase'
 
 type CheckResult =
@@ -39,7 +40,7 @@ export function StatusPage() {
 
   return (
     <>
-      <span className="brand">Dnd Hub</span>
+      <AppHeader />
       <h1 style={{ fontSize: 32 }}>Проверка доступа</h1>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
         {result.state === 'no-keys' && <span className="chip">Ключи Supabase не заданы</span>}
