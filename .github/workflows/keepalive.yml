@@ -1,0 +1,27 @@
+name: Keep Supabase awake
+
+# Free Supabase projects pause after a week without activity.
+# A tiny read query every 3 days keeps the database awake.
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query the database
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          base="$(echo "$SUPABASE_URL" | sed -E 's#^(https?://[^/]+).*#\1#')"
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            "$base/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "HTTP $status"
+          test "$status" = "200"
