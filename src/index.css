@@ -1,10 +1,190 @@
+/* Khvor theme: dark grey base, blood red / violet / blue accents. */
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
+  /* surfaces */
+  --bg: #111113;
+  --surface: #1b1b1e;
+  --surface-sunken: #161618;
+  --track: #26262a;
+  --line: #2e2e33;
+  --line-soft: #242428;
+  --line-strong: #4a4a52;
+
+  /* text */
+  --text: #e6e4e0;
+  --text-strong: #f0eeea;
+  --text-muted: #a3a1a8;
+  --text-faint: #8e8c94;
+
+  /* main accent: dark grey */
+  --accent: #3d3d45;
+  --accent-border: #62626c;
+  --ring: #6b6b74;
+
+  /* blood red: HP, crits, pending changes */
+  --blood: #9e1f1f;
+  --blood-deep: #7a1a1a;
+  --blood-text: #e05a52;
+  --blood-glow: rgba(158, 31, 31, 0.5);
+
+  /* violet: magic, spell slots, charges */
+  --magic: #a77de0;
+  --magic-glow: rgba(150, 95, 215, 0.45);
+
+  /* blue: precursors, status, links, "may be inaccurate" */
+  --tech: #8fbfe0;
+  --tech-hover: #b5d6ee;
+  --tech-border: #34506a;
+
+  --font-body: 'Alegreya Sans', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-caps: 'Cormorant SC', Georgia, serif;
+
+  --radius: 10px;
+
+  color-scheme: dark;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg);
 }
 
 body {
   margin: 0;
-  padding: 16px;
+  background: var(--bg);
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--tech);
+}
+a:hover {
+  color: var(--tech-hover);
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+/* Layout: phone first, centered column on wide screens */
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 14px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand {
+  font-family: var(--font-caps);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.subtitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--blood-text);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-caps);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  border-radius: 1px;
+}
+
+.btn {
+  min-height: 48px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font-size: 15px;
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.btn:hover {
+  color: var(--text-strong);
+  border-color: var(--accent-border);
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent-border);
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.chip {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.chip-tech {
+  border-color: var(--tech-border);
+  color: var(--tech);
+}
+.chip-blood {
+  border-color: var(--blood);
+  color: var(--blood-text);
+}
+.chip-magic {
+  border-color: var(--magic);
+  color: var(--magic);
+}
+
+:focus-visible {
+  outline: 2px solid var(--tech);
+  outline-offset: 2px;
 }

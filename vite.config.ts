@@ -19,8 +19,8 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
-        background_color: '#1f1b24',
-        theme_color: '#1f1b24',
+        background_color: '#111113',
+        theme_color: '#111113',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -29,7 +29,7 @@ export default defineConfig({
       },
       workbox: {
         // Cache the app shell; Supabase data will get its own offline handling in phase 3
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
   ],
