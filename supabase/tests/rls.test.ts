@@ -243,3 +243,51 @@ describe('changes', () => {
     expect((await runAs(cdb, P1, 'delete from public.changes')).ok).toBe(false)
   })
 })
+
+describe('character notes', () => {
+  let ndb: PGlite
+  let velian = ''
+  let kairen = ''
+
+  const upsert = (uid: string, character: string, body: string) =>
+    runAs(
+      ndb,
+      uid,
+      `insert into public.character_notes (character_id, body, updated_by) values ('${character}', '${body}', '${uid}')
+       on conflict (character_id) do update set body = excluded.body, updated_at = now(), updated_by = excluded.updated_by
+       returning body`,
+    )
+
+  beforeAll(async () => {
+    ndb = await createDb()
+    await ndb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const r = await runAs(
+      ndb,
+      GM,
+      `insert into public.characters (owner_id, name, foundry_actor_id, status) values ('${P1}', 'Velian', 'a1', 'in_game'), ('${P2}', 'Kairen', 'a2', 'between_sessions') returning id, name`,
+    )
+    if (!r.ok) throw new Error(r.error)
+    velian = String(r.rows.find((x) => x.name === 'Velian')?.id)
+    kairen = String(r.rows.find((x) => x.name === 'Kairen')?.id)
+  })
+
+  it('owner writes and rewrites notes, even during the game', async () => {
+    expect(await upsert(P1, velian, 'первая')).toEqual({ ok: true, rows: [{ body: 'первая' }] })
+    expect(await upsert(P1, velian, 'вторая')).toEqual({ ok: true, rows: [{ body: 'вторая' }] })
+  })
+
+  it("player cannot read or write someone else's notes", async () => {
+    await upsert(P2, kairen, 'секрет')
+    expect(await runAs(ndb, P1, `select body from public.character_notes where character_id = '${kairen}'`)).toEqual({ ok: true, rows: [] })
+    expect((await upsert(P1, kairen, 'взлом')).ok).toBe(false)
+  })
+
+  it('gm reads all notes; nobody deletes', async () => {
+    const r = await runAs(ndb, GM, 'select body from public.character_notes order by body')
+    expect(r).toEqual({ ok: true, rows: [{ body: 'вторая' }, { body: 'секрет' }] })
+    expect((await runAs(ndb, P1, 'delete from public.character_notes')).ok).toBe(false)
+  })
+})
