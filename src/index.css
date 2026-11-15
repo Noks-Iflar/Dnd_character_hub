@@ -502,3 +502,68 @@ button.ability:hover {
   color: var(--text-muted);
   cursor: pointer;
 }
+
+.tiny {
+  font-size: 11px;
+}
+.attack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.attack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.attack-name {
+  display: flex;
+  flex-direction: column;
+  font-size: 17px;
+}
+.attack-btn {
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+button.attack-btn {
+  cursor: pointer;
+}
+button.attack-btn:hover {
+  border-color: var(--accent-border);
+}
+.small-number {
+  font-size: 16px;
+}
+.list-row.static {
+  cursor: default;
+}
+.link-btn {
+  min-height: 44px;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  color: var(--tech);
+  cursor: pointer;
+}
+.pips {
+  display: inline-flex;
+  gap: 6px;
+}
+.pip {
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--magic);
+}
+.pip.full {
+  background: var(--magic);
+}

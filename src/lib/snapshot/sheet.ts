@@ -45,6 +45,17 @@ export type SheetClass = { name: string; levels: number; subclass: string | null
 export type SheetItem = { id: string; name: string; type: string; quantity: number; equipped: boolean; description: string }
 export type SheetSpell = { id: string; name: string; level: number; prepared: number; description: string }
 export type SheetFeature = { id: string; name: string; description: string }
+export type SheetDamage = { formula: string; type: string | null }
+export type SheetAttack = {
+  id: string
+  name: string
+  activity: string
+  toHit: number | null
+  save: { dc: number; ability: AbilityKey | null } | null
+  damages: SheetDamage[]
+  range: string | null
+}
+export type SheetResource = { id: string; name: string; value: number; max: number; kind: 'uses' | 'slot' }
 
 export type Sheet = {
   name: string
@@ -66,6 +77,9 @@ export type Sheet = {
   inventory: SheetItem[]
   spells: SheetSpell[]
   features: SheetFeature[]
+  attacks: SheetAttack[]
+  resources: SheetResource[]
+  spellcasting: { dc: number; attack: number } | null
   hasComputed: boolean
 }
 
@@ -111,6 +125,71 @@ function estimateMaxHp(classItems: JsonObject[], conMod: number, level: number):
     }
   }
   return found ? total + conMod * level : null
+}
+
+const SAVE_ABILITY: Record<string, AbilityKey> = {
+  strength: 'str',
+  dexterity: 'dex',
+  constitution: 'con',
+  intelligence: 'int',
+  wisdom: 'wis',
+  charisma: 'cha',
+}
+
+/** "DC 13 Strength" (dnd5e save label) -> { dc: 13, ability: 'str' }. */
+export function parseSaveLabel(label: string | null): SheetAttack['save'] {
+  const m = label ? /DC\s*(\d+)\s*([A-Za-z]+)?/i.exec(label) : null
+  if (!m) return null
+  return { dc: Number(m[1]), ability: SAVE_ABILITY[(m[2] ?? '').toLowerCase()] ?? null }
+}
+
+const ATTACK_ACTIVITY_TYPES = new Set(['attack', 'save', 'damage'])
+
+/** Attacks, saves and damage rolls from item activities computed by Foundry. */
+function computedAttacks(computed: JsonObject | null): SheetAttack[] {
+  const out: SheetAttack[] = []
+  for (const item of arr(get(computed, 'items')).filter(isObject)) {
+    for (const act of arr(item.activities).filter(isObject)) {
+      if (!ATTACK_ACTIVITY_TYPES.has(str(act.type) ?? '')) continue
+      const labels = act.labels
+      const damages = arr(get(labels, 'damages'))
+        .filter(isObject)
+        .map((d) => ({ formula: str(d.formula) ?? '', type: str(d.damageType) }))
+        .filter((d) => d.formula !== '')
+      const toHit = num(str(get(labels, 'toHit'))?.replace('+', ''))
+      const save = parseSaveLabel(str(get(labels, 'save')))
+      if (toHit === null && !save && damages.length === 0) continue
+      out.push({
+        id: `${str(item.id) ?? ''}.${str(act.id) ?? ''}`,
+        name: str(item.name) ?? '',
+        activity: str(act.name) ?? '',
+        toHit,
+        save,
+        damages,
+        range: str(get(labels, 'range')),
+      })
+    }
+  }
+  return out
+}
+
+/** Limited uses of features and items, plus spell slots, from Foundry values. */
+function computedResources(computed: JsonObject | null): SheetResource[] {
+  const out: SheetResource[] = []
+  for (const item of arr(get(computed, 'items')).filter(isObject)) {
+    const max = num(get(item, 'uses', 'max'))
+    if (max === null || max <= 0) continue
+    out.push({ id: str(item.id) ?? '', name: str(item.name) ?? '', value: num(get(item, 'uses', 'value')) ?? 0, max, kind: 'uses' })
+  }
+  const slots = get(computed, 'spellSlots')
+  for (const [key, slot] of Object.entries(isObject(slots) ? slots : {})) {
+    const max = num(get(slot, 'max'))
+    if (max === null || max <= 0) continue
+    const level = num(get(slot, 'level'))
+    const name = key === 'pact' ? `Ячейки договора (${level ?? '?'} круг)` : `Ячейки ${level ?? key.replace('spell', '')} круга`
+    out.push({ id: key, name, value: num(get(slot, 'value')) ?? 0, max, kind: 'slot' })
+  }
+  return out
 }
 
 export function buildSheet(snapshot: Snapshot): Sheet {
@@ -219,6 +298,14 @@ export function buildSheet(snapshot: Snapshot): Sheet {
     features: all
       .filter((i) => i.type === 'feat')
       .map((i) => ({ id: str(i._id) ?? '', name: str(i.name) ?? '', description: description(i) })),
+    attacks: computedAttacks(c),
+    resources: computedResources(c),
+    spellcasting: (() => {
+      const dc = num(get(c, 'spell', 'dc'))
+      const attack = num(get(c, 'spell', 'attack'))
+      const caster = all.some((i) => i.type === 'spell') || str(get(sys, 'attributes', 'spellcasting'))
+      return dc !== null && attack !== null && caster ? { dc, attack } : null
+    })(),
     hasComputed: c !== null,
   }
 }

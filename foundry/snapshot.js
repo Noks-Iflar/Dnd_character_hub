@@ -32,8 +32,9 @@
     if (Array.isArray(value)) return value.map((v) => plain(v, depth + 1, seen));
     if (value instanceof Set) return [...value].map((v) => plain(v, depth + 1, seen));
     if (value instanceof Map) {
+      // Foundry's Collection extends Map but iterates values only, so ask for pairs explicitly
       const out = {};
-      for (const [k, v] of value) out[String(k)] = plain(v, depth + 1, seen);
+      for (const [k, v] of Map.prototype.entries.call(value)) out[String(k)] = plain(v, depth + 1, seen);
       return out;
     }
     const out = {};
