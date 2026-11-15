@@ -291,3 +291,78 @@ describe('character notes', () => {
     expect((await runAs(ndb, P1, 'delete from public.character_notes')).ok).toBe(false)
   })
 })
+
+describe('diary', () => {
+  let ddb: PGlite
+  let openPage = ''
+  let secretPage = ''
+  let session = ''
+
+  beforeAll(async () => {
+    ddb = await createDb()
+    await ddb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const pages = await runAs(
+      ddb,
+      GM,
+      `insert into public.lore_pages (title, body, gm_only) values ('География', 'Арс', false), ('Тайна', 'Хвор — болезнь', true) returning id, gm_only`,
+    )
+    if (!pages.ok) throw new Error(pages.error)
+    openPage = String(pages.rows.find((r) => r.gm_only === false)?.id)
+    secretPage = String(pages.rows.find((r) => r.gm_only === true)?.id)
+    const s = await runAs(ddb, GM, `insert into public.diary_sessions (number, summary) values (1, 'Экзамен в Муртаге') returning id`)
+    if (!s.ok) throw new Error(s.error)
+    session = String(s.rows[0]?.id)
+    await runAs(ddb, GM, `insert into public.diary_entries (lore_page_id, body, character_name) values ('${secretPage}', 'заметка мастера', null)`)
+  })
+
+  it('players read open lore and sessions, but not GM-only pages or their entries', async () => {
+    expect(await runAs(ddb, P1, 'select title from public.lore_pages')).toEqual({ ok: true, rows: [{ title: 'География' }] })
+    expect(await runAs(ddb, P1, 'select number from public.diary_sessions')).toEqual({ ok: true, rows: [{ number: 1 }] })
+    expect(await runAs(ddb, P1, 'select body from public.diary_entries')).toEqual({ ok: true, rows: [] })
+    const gm = await runAs(ddb, GM, 'select title from public.lore_pages')
+    expect(gm.ok && gm.rows.length).toBe(2)
+  })
+
+  it('only the GM writes lore and sessions', async () => {
+    expect((await runAs(ddb, P1, `insert into public.lore_pages (title) values ('x')`)).ok).toBe(false)
+    expect(await runAs(ddb, P1, `update public.diary_sessions set summary = 'взлом' returning id`)).toEqual({ ok: true, rows: [] })
+    expect(await runAs(ddb, P1, `delete from public.lore_pages returning id`)).toEqual({ ok: true, rows: [] })
+  })
+
+  it('players add entries as themselves to visible pages and sessions', async () => {
+    const memory = await runAs(
+      ddb,
+      P1,
+      `insert into public.diary_entries (session_id, kind, body, character_name) values ('${session}', 'memory', 'травма гнома', 'Дайдэн') returning author_id`,
+    )
+    expect(memory).toEqual({ ok: true, rows: [{ author_id: P1 }] })
+    expect((await runAs(ddb, P1, `insert into public.diary_entries (lore_page_id, kind, body) values ('${openPage}', 'lore', 'догадка')`)).ok).toBe(true)
+    expect((await runAs(ddb, P1, `insert into public.diary_entries (lore_page_id, body) values ('${secretPage}', 'подглядел')`)).ok).toBe(false)
+    expect((await runAs(ddb, P1, `insert into public.diary_entries (session_id, body, author_id) values ('${session}', 'чужое', '${P2}')`)).ok).toBe(false)
+  })
+
+  it('an entry needs exactly one target', async () => {
+    expect((await runAs(ddb, P1, `insert into public.diary_entries (body) values ('никуда')`)).ok).toBe(false)
+    expect(
+      (await runAs(ddb, P1, `insert into public.diary_entries (lore_page_id, session_id, body) values ('${openPage}', '${session}', 'везде')`)).ok,
+    ).toBe(false)
+  })
+
+  it("authors edit and delete their own entries, not other players'", async () => {
+    expect(await runAs(ddb, P2, `update public.diary_entries set body = 'испорчено' where character_name = 'Дайдэн' returning id`)).toEqual({ ok: true, rows: [] })
+    expect(await runAs(ddb, P2, `delete from public.diary_entries where character_name = 'Дайдэн' returning id`)).toEqual({ ok: true, rows: [] })
+    const own = await runAs(ddb, P1, `update public.diary_entries set body = 'травма гнома (исправлено)' where character_name = 'Дайдэн' returning body`)
+    expect(own).toEqual({ ok: true, rows: [{ body: 'травма гнома (исправлено)' }] })
+    expect((await runAs(ddb, P1, `update public.diary_entries set author_id = '${P2}' where character_name = 'Дайдэн'`)).ok).toBe(false)
+  })
+
+  it('the GM edits and deletes any entry', async () => {
+    const r = await runAs(ddb, GM, `update public.diary_entries set character_name = 'Дайдэн (Аня)' where character_name = 'Дайдэн' returning id`)
+    expect(r.ok && r.rows.length).toBe(1)
+    const d = await runAs(ddb, GM, `delete from public.diary_entries where body = 'догадка' returning id`)
+    expect(d.ok && d.rows.length).toBe(1)
+  })
+})
