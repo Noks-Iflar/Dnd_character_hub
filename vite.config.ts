@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Хвор — листы персонажей',
-        short_name: 'Хвор',
+        name: 'Dnd Hub',
+        short_name: 'Dnd Hub',
         description: 'Листы персонажей кампании «Хвор» между сессиями',
         lang: 'ru',
         start_url: './',
