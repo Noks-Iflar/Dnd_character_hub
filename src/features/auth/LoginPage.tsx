@@ -79,6 +79,9 @@ export function LoginPage() {
       <p className="muted" style={{ textAlign: 'center', fontSize: 14 }}>
         Аккаунты создаёт мастер. Забыл пароль — напиши мастеру.
       </p>
+      <Link to="/sheet" style={{ alignSelf: 'center', fontSize: 15 }}>
+        Открыть лист из файла без входа
+      </Link>
       <Link to="/status" style={{ alignSelf: 'center', fontSize: 14 }}>
         Проверка доступа
       </Link>

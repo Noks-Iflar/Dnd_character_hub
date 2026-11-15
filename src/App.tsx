@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
+import { SheetPage } from './features/sheet/SheetPage'
 import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
 import { useProfile, type UserRole } from './lib/profile'
@@ -33,7 +34,9 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
         {profile.status === 'error' && <p className="error">{profile.message}</p>}
         <span className="muted">Почта: {email}</span>
       </div>
-      <p className="muted">Скоро здесь будет лист персонажа.</p>
+      <Link className="btn btn-primary" to="/sheet">
+        Открыть лист из файла
+      </Link>
       <Link className="btn" to="/status">
         Проверка доступа
       </Link>
@@ -53,6 +56,7 @@ function App() {
     <main className="page">
       <Routes>
         <Route path="/status" element={<StatusPage />} />
+        <Route path="/sheet" element={<SheetPage />} />
         <Route path="*" element={<Protected />} />
       </Routes>
     </main>
