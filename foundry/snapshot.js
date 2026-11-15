@@ -14,7 +14,7 @@
     try {
       const v = fn();
       return v === undefined ? null : v;
-    } catch (e) {
+    } catch {
       return null;
     }
   };

@@ -31,6 +31,11 @@ describe('cleanEnrichers', () => {
     expect(cleanEnrichers('[[/r 1d6]]{шесть}')).toBe('шесть')
   })
 
+  it('drops lookups that only Foundry can resolve', () => {
+    expect(cleanEnrichers('кость ([[lookup @scale.bard.inspiration.die]]).')).toBe('кость ().')
+    expect(cleanEnrichers('@Embed[Compendium.dnd5e.content24.JournalEntry.x inline]')).toBe('')
+  })
+
   it('keeps arguments of other commands', () => {
     expect(cleanEnrichers('[[/damage 2d6 fire]]')).toBe('2d6 fire')
   })

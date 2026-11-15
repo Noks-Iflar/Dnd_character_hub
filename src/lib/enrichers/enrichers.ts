@@ -20,6 +20,7 @@ export function cleanEnrichers(text: string): string {
     .replace(INLINE_RE, (_match, inner: string, label?: string) => {
       if (label !== undefined) return label
       const content = inner.trim()
+      if (/^\/?lookup\b/i.test(content)) return '' // [[lookup @...]]: value only Foundry can resolve
       const cmd = /^\/(\w+)\s*([\s\S]*)$/.exec(content)
       if (!cmd) return content // plain inline roll: [[1d6]]
       const [, name, args] = cmd
