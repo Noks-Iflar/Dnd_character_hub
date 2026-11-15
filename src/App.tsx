@@ -5,6 +5,9 @@ import { CharacterPage } from './features/character/CharacterPage'
 import { HistoryPage } from './features/character/HistoryPage'
 import { VersionPage } from './features/character/VersionPage'
 import { GmPage } from './features/gm-dashboard/GmPage'
+import { DiaryPage } from './features/lore/DiaryPage'
+import { LorePageView } from './features/lore/LorePageView'
+import { SessionView } from './features/lore/SessionView'
 import { SheetPage } from './features/sheet/SheetPage'
 import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
@@ -128,6 +131,9 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
       <h2 className="section-title">{isGm ? 'Все персонажи' : 'Мои персонажи'}</h2>
       {profile.status === 'ready' && <MyCharacters isGm={isGm} userId={userId} />}
 
+      <Link className="btn" to="/diary">
+        Дневник приключенцев
+      </Link>
       <Link className="btn" to="/sheet">
         Открыть лист из файла
       </Link>
@@ -162,6 +168,9 @@ function App() {
         <Route path="/sheet" element={<SheetPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/gm" element={<GmPage />} />
+          <Route path="/diary" element={<DiaryPage />} />
+          <Route path="/diary/lore/:id" element={<LorePageView />} />
+          <Route path="/diary/session/:id" element={<SessionView />} />
           <Route path="/character/:id" element={<CharacterPage />} />
           <Route path="/character/:id/history" element={<HistoryPage />} />
           <Route path="/character/:id/v/:snapshotId" element={<VersionPage />} />

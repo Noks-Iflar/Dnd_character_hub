@@ -1220,3 +1220,86 @@ details.card.nested > summary::-webkit-details-marker {
 .version-card:hover {
   border-color: var(--line-strong);
 }
+
+/* ---- diary ---- */
+.prose {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.entry-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.entry-kind {
+  margin: 4px 0 0;
+  font-family: var(--font-caps);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--magic-text);
+}
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.entry-who {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+}
+.entry-actions {
+  display: flex;
+  gap: 4px;
+  margin: -6px -8px -10px;
+}
+.text-btn.danger {
+  color: var(--blood-text);
+}
+details.add-entry > summary {
+  cursor: pointer;
+  list-style: none;
+  border-bottom: none;
+}
+details.add-entry > summary::-webkit-details-marker {
+  display: none;
+}
+.diary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--text);
+}
+.diary-card:hover {
+  border-color: var(--line-strong);
+}
+.diary-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.highlights {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+.field textarea {
+  font: inherit;
+}
+.danger-btn {
+  color: var(--blood-text);
+}
