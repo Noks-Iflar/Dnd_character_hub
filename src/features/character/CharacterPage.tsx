@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '../../lib/auth-context'
-import { addChange, getCharacter, latestSnapshot, listChanges, type Character, type StoredSnapshot } from '../../lib/db'
+import { addChange, getCharacter, getNotes, latestSnapshot, listChanges, saveNotes, type Character, type StoredSnapshot } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
-import { loadOffline, offlineSnapshot, onlineOr, saveSnapshot } from '../../lib/offline'
+import { loadOffline, offlineNotes, offlineSnapshot, onlineOr, saveNotesOffline, saveSnapshot } from '../../lib/offline'
 import { applyChanges, type Change, type ChangeValue } from '../../lib/snapshot/changes'
 import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { buildSheet } from '../../lib/snapshot/sheet'
 import type { Snapshot } from '../../lib/snapshot/types'
+import type { NotesBinding } from '../sheet/NotesEditor'
 import { SheetView, type SheetEdit } from '../sheet/SheetView'
 import { AppHeader } from '../../components/AppHeader'
 import { EmptyState } from '../../components/EmptyState'
@@ -16,8 +17,8 @@ type State =
   | { status: 'loading' }
   | { status: 'empty' }
   | { status: 'error'; message: string }
-  | { status: 'online'; base: StoredSnapshot; changes: Change[]; character: Character | null }
-  | { status: 'offline'; snapshot: Snapshot; createdAt: string }
+  | { status: 'online'; base: StoredSnapshot; changes: Change[]; character: Character | null; notes: string }
+  | { status: 'offline'; snapshot: Snapshot; createdAt: string; notes: string | null }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -33,21 +34,22 @@ export function CharacterPage() {
   useEffect(() => {
     let cancelled = false
     onlineOr(async () => {
-      const [base, character] = await Promise.all([latestSnapshot(id), getCharacter(id)])
+      const [base, character, notes] = await Promise.all([latestSnapshot(id), getCharacter(id), getNotes(id)])
       const changes = base ? await listChanges(base.id) : []
-      return { base, character, changes }
+      return { base, character, changes, notes: notes.body }
     }, 8000)
-      .then(({ base, character, changes }) => {
+      .then(({ base, character, changes, notes }) => {
         if (cancelled) return
         if (!base) return setState({ status: 'empty' })
-        setState({ status: 'online', base, changes, character })
+        if (userId) saveNotesOffline(userId, id, notes)
+        setState({ status: 'online', base, changes, character, notes })
       })
       .catch((e: unknown) => {
         if (cancelled) return
         const saved = offlineSnapshot(id)
         const parsed = saved ? parseSnapshotJson(JSON.stringify(saved.data)) : null
         if (saved && parsed?.ok && parsed.snapshots[0]) {
-          setState({ status: 'offline', snapshot: parsed.snapshots[0], createdAt: saved.createdAt })
+          setState({ status: 'offline', snapshot: parsed.snapshots[0], createdAt: saved.createdAt, notes: offlineNotes(id) })
         } else {
           setState({ status: 'error', message: errorText(e) })
         }
@@ -55,7 +57,7 @@ export function CharacterPage() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, userId])
 
   const view = useMemo(() => {
     if (state.status === 'online') {
@@ -66,10 +68,27 @@ export function CharacterPage() {
     return null
   }, [state])
 
-  // Keep the edited sheet available offline
+  // Keep the edited sheet available offline (notes are saved on load and on every save)
   useEffect(() => {
-    if (state.status === 'online' && view && userId) saveSnapshot(userId, id, view.snapshot, state.base.createdAt)
+    if (state.status === 'online' && view && userId) {
+      saveSnapshot(userId, id, view.snapshot, state.base.createdAt)
+    }
   }, [state, view, userId, id])
+
+  const notes: NotesBinding | undefined =
+    state.status === 'online'
+      ? {
+          initial: state.notes,
+          save: userId
+            ? async (body: string) => {
+                await saveNotes(id, userId, body)
+                saveNotesOffline(userId, id, body)
+              }
+            : null,
+        }
+      : state.status === 'offline' && state.notes !== null
+        ? { initial: state.notes, save: null }
+        : undefined
 
   const record = useCallback(
     (path: string, oldValue: ChangeValue | null, newValue: ChangeValue) => {
@@ -109,7 +128,10 @@ export function CharacterPage() {
       )}
       {state.status === 'online' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="muted small">Снимок из Foundry от {formatDateTime(state.base.createdAt)}</span>
+          <span className="muted small">
+            Снимок из Foundry от {formatDateTime(state.base.createdAt)} ·{' '}
+            <Link to={`/character/${id}/history`}>история версий</Link>
+          </span>
           {inGame ? (
             <span className="chip chip-blood">Идёт игра: правки закрыты до следующего снимка</span>
           ) : (
@@ -126,7 +148,7 @@ export function CharacterPage() {
           )}
         </div>
       )}
-      {view && <SheetView sheet={view.sheet} edit={edit} />}
+      {view && <SheetView sheet={view.sheet} edit={edit} notes={notes} />}
     </>
   )
 }

@@ -1,14 +1,19 @@
 import { Description } from '../bits'
+import { NotesEditor, type NotesBinding } from '../NotesEditor'
 import type { TabProps } from '../sheet-ui'
 
-/** "Заметки": class and species features; personal notes come later in phase 4. */
-export function NotesTab({ sheet }: TabProps) {
+/** "Заметки": personal notes (when the sheet comes from the database) and features. */
+export function NotesTab({ sheet, notes }: TabProps & { notes?: NotesBinding }) {
   return (
     <>
       <h1 style={{ fontSize: 32 }}>Заметки</h1>
-      <div className="card hint">
-        <span className="muted small">Личные заметки появятся здесь позже: их будут видеть только ты и мастер.</span>
-      </div>
+      {notes ? (
+        <NotesEditor notes={notes} />
+      ) : (
+        <div className="card hint">
+          <span className="muted small">Личные заметки доступны, когда лист открыт из приложения, а не из файла.</span>
+        </div>
+      )}
       <h2 className="section-title">Умения и черты</h2>
       {sheet.features.length === 0 ? (
         <p className="muted">Умений нет.</p>

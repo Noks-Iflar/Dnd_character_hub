@@ -220,3 +220,64 @@ export async function markChangesApplied(changeIds: string[]): Promise<void> {
   const { error } = await client().from('changes').update({ applied_at: new Date().toISOString() }).in('id', changeIds)
   if (error) throw new Error(error.message)
 }
+
+export type CharacterNotes = { body: string; updatedAt: string | null }
+
+export async function getNotes(characterId: string): Promise<CharacterNotes> {
+  const { data, error } = await client().from('character_notes').select('body, updated_at').eq('character_id', characterId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return { body: str(get(data, 'body')) ?? '', updatedAt: str(get(data, 'updated_at')) }
+}
+
+export async function saveNotes(characterId: string, userId: string, body: string): Promise<void> {
+  const { error } = await client()
+    .from('character_notes')
+    .upsert({ character_id: characterId, body, updated_by: userId, updated_at: new Date().toISOString() }, { onConflict: 'character_id' })
+  if (error) throw new Error(describeWriteError(error.message))
+}
+
+export type SnapshotVersion = { id: string; createdAt: string; foundryVersion: string | null; systemVersion: string | null; changes: number }
+
+/** All snapshots of a character, newest first, with the number of edits made on top of each. */
+export async function listSnapshotVersions(characterId: string): Promise<SnapshotVersion[]> {
+  const db = client()
+  const [snaps, edits] = await Promise.all([
+    db
+      .from('snapshots')
+      .select('id, created_at, foundry_version, system_version')
+      .eq('character_id', characterId)
+      .order('created_at', { ascending: false }),
+    db.from('changes').select('snapshot_id').eq('character_id', characterId),
+  ])
+  if (snaps.error) throw new Error(snaps.error.message)
+  if (edits.error) throw new Error(edits.error.message)
+  const counts = new Map<string, number>()
+  for (const row of edits.data ?? []) {
+    const id = str(get(row, 'snapshot_id'))
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  const out: SnapshotVersion[] = []
+  for (const row of snaps.data ?? []) {
+    const id = str(get(row, 'id'))
+    const createdAt = str(get(row, 'created_at'))
+    if (!id || !createdAt) continue
+    out.push({
+      id,
+      createdAt,
+      foundryVersion: str(get(row, 'foundry_version')),
+      systemVersion: str(get(row, 'system_version')),
+      changes: counts.get(id) ?? 0,
+    })
+  }
+  return out
+}
+
+/** One snapshot by id (RLS: own character or the GM). */
+export async function getSnapshot(snapshotId: string): Promise<StoredSnapshot | null> {
+  const { data, error } = await client().from('snapshots').select('id, data, created_at').eq('id', snapshotId).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  const parsed = parseSnapshotJson(JSON.stringify(get(data, 'data')))
+  if (!parsed.ok || !parsed.snapshots[0]) throw new Error(`Снимок повреждён: ${parsed.ok ? 'пусто' : parsed.error}`)
+  return { id: str(get(data, 'id')) ?? '', snapshot: parsed.snapshots[0], createdAt: str(get(data, 'created_at')) ?? '' }
+}
