@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { roll } from '../../lib/dice/dice'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
-import type { Sheet } from '../../lib/snapshot/sheet'
+import { ABILITY_LABEL, type Sheet, type SheetAttack } from '../../lib/snapshot/sheet'
 import { Approx } from './Approx'
-import { d20, statText } from './format'
+import { d20, signed, statText } from './format'
 import { RollToast, type ShownRoll } from './RollToast'
 
 const COINS: [string, string][] = [
@@ -13,6 +13,39 @@ const COINS: [string, string][] = [
   ['sp', 'см'],
   ['cp', 'мм'],
 ]
+
+const DAMAGE_TYPE: Record<string, string> = {
+  acid: 'кислота',
+  bludgeoning: 'дробящий',
+  cold: 'холод',
+  fire: 'огонь',
+  force: 'силовое поле',
+  lightning: 'электричество',
+  necrotic: 'некротическая энергия',
+  piercing: 'колющий',
+  poison: 'яд',
+  psychic: 'психическая энергия',
+  radiant: 'излучение',
+  slashing: 'рубящий',
+  thunder: 'звук',
+  healing: 'лечение',
+  temphp: 'временные хиты',
+}
+
+function damageText(a: SheetAttack): string {
+  return a.damages.map((d) => `${d.formula}${d.type ? ` ${DAMAGE_TYPE[d.type] ?? d.type}` : ''}`).join(' + ')
+}
+
+function Pips({ value, max }: { value: number; max: number }) {
+  if (max > 10) return <span className="row-number">{`${value} / ${max}`}</span>
+  return (
+    <span className="pips" aria-label={`${value} из ${max}`}>
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`pip${i < value ? ' full' : ''}`} />
+      ))}
+    </span>
+  )
+}
 
 function Description({ html }: { html: string }) {
   const safe = toSafeHtml(html).trim()
@@ -27,6 +60,12 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
     if (mod === null) return
     const result = roll(d20(mod))
     if (result) setShown({ label, result })
+  }
+
+  function rollDamage(a: SheetAttack) {
+    const parts = a.damages.map((d) => d.formula)
+    const result = roll(parts.join(' + '))
+    if (result) setShown({ label: `${a.name}: урон`, result })
   }
 
   const hpMax = sheet.hp.max.value
@@ -138,6 +177,65 @@ export function SheetView({ sheet }: { sheet: Sheet }) {
           </button>
         ))}
       </div>
+
+      {sheet.attacks.length > 0 && (
+        <>
+          <h2 className="section-title">Атаки</h2>
+          <div className="attack-list">
+            {sheet.attacks.map((a) => (
+              <div key={a.id} className="card attack">
+                <div className="grow attack-name">
+                  <span>{a.name}</span>
+                  <span className="muted small">
+                    {[a.activity !== 'Attack' ? a.activity : null, a.range, damageText(a) || null].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+                {a.toHit !== null && (
+                  <button className="attack-btn" onClick={() => rollD20(`${a.name}: попадание`, a.toHit)}>
+                    <span className="row-number">{signed(a.toHit)}</span>
+                    <span className="muted tiny">попадание</span>
+                  </button>
+                )}
+                {a.toHit === null && a.save && (
+                  <div className="attack-btn">
+                    <span className="row-number">СЛ {a.save.dc}</span>
+                    <span className="muted tiny">{a.save.ability ? ABILITY_LABEL[a.save.ability] : 'спас'}</span>
+                  </div>
+                )}
+                {a.damages.length > 0 && (
+                  <button className="attack-btn" onClick={() => rollDamage(a)}>
+                    <span className="row-number small-number">{a.damages.map((d) => d.formula.replace(/\s+/g, '')).join('+')}</span>
+                    <span className="muted tiny">урон</span>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(sheet.resources.length > 0 || sheet.spellcasting) && (
+        <>
+          <h2 className="section-title">Заряды и магия</h2>
+          <div className="card list">
+            {sheet.spellcasting && (
+              <div className="list-row static">
+                <span className="grow">Заклинания</span>
+                <span className="muted small">СЛ {sheet.spellcasting.dc}</span>
+                <button className="link-btn" onClick={() => rollD20('Атака заклинанием', sheet.spellcasting?.attack ?? 0)}>
+                  атака {signed(sheet.spellcasting.attack)}
+                </button>
+              </div>
+            )}
+            {sheet.resources.map((r) => (
+              <div key={`${r.kind}.${r.id}`} className="list-row static">
+                <span className="grow">{r.name}</span>
+                <Pips value={r.value} max={r.max} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {sheet.spells.length > 0 && (
         <>

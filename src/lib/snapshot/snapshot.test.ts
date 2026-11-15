@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseSnapshotJson } from './parse'
-import { abilityMod, buildSheet, profBonus, type Sheet } from './sheet'
+import { abilityMod, buildSheet, parseSaveLabel, profBonus, type Sheet } from './sheet'
 import type { Snapshot } from './types'
 
 const FIXTURES = join(import.meta.dirname, '..', '..', '..', 'fixtures', 'actors')
@@ -34,6 +34,14 @@ describe('rules helpers', () => {
   })
   it('proficiency bonus by level', () => {
     expect([1, 4, 5, 8, 9, 13, 17, 20].map(profBonus)).toEqual([2, 2, 3, 3, 4, 5, 6, 6])
+  })
+})
+
+describe('parseSaveLabel', () => {
+  it('reads dnd5e save labels', () => {
+    expect(parseSaveLabel('DC 13 Strength')).toEqual({ dc: 13, ability: 'str' })
+    expect(parseSaveLabel('DC 15')).toEqual({ dc: 15, ability: null })
+    expect(parseSaveLabel(null)).toBe(null)
   })
 })
 
@@ -131,5 +139,40 @@ describe.skipIf(!hasFixtures)('real exports from fixtures/', () => {
     expect(s.hp.max.value).toBe(29)
     expect(s.prof.value).toBe(2)
     expect(s.race).toBe('Dragonborn')
+  })
+})
+
+const SNAPSHOTS = join(import.meta.dirname, '..', '..', '..', 'fixtures', 'snapshots')
+
+describe.skipIf(!existsSync(join(SNAPSHOTS, 'party-2026-11-15.json')))('real party snapshot from the macro', () => {
+  const load = () => {
+    const r = parseSnapshotJson(readFileSync(join(SNAPSHOTS, 'party-2026-11-15.json'), 'utf8'))
+    if (!r.ok) throw new Error(r.error)
+    return r.snapshots.map(buildSheet)
+  }
+
+  it('contains two characters with Foundry values', () => {
+    const sheets = load()
+    expect(sheets.map((s) => s.name)).toEqual(['Ваня', 'Вася'])
+    expect(sheets.every((s) => s.hasComputed)).toBe(true)
+  })
+
+  it('barbarian: AC, HP, attacks, rage uses', () => {
+    const s = load()[1] as Sheet
+    expect(s.ac).toEqual({ value: 14, from: 'foundry' })
+    expect(s.hp).toMatchObject({ value: 35, max: { value: 35, from: 'foundry' } })
+    expect(s.classes[0]).toEqual({ name: 'Barbarian', levels: 3, subclass: 'Path of the Berserker' })
+    const sword = s.attacks.find((a) => a.name === 'Greatsword')
+    expect(sword).toMatchObject({ toHit: 5, damages: [{ formula: '2d6 + 3', type: 'slashing' }] })
+    expect(s.attacks.find((a) => a.activity === 'Grapple/Shove')?.save).toEqual({ dc: 13, ability: 'str' })
+    expect(s.resources).toContainEqual({ id: expect.any(String), name: 'Rage', value: 3, max: 3, kind: 'uses' })
+    expect(s.spellcasting).toBe(null)
+  })
+
+  it('rogue: speed and skills from Foundry', () => {
+    const s = load()[0] as Sheet
+    expect(s.speed).toEqual({ value: 35, from: 'foundry' })
+    expect(s.skills.find((k) => k.key === 'ath')?.total).toEqual({ value: 4, from: 'foundry' })
+    expect(s.attacks.find((a) => a.name === 'Sneak Attack')?.damages[0]?.formula).toBe('2d6')
   })
 })
