@@ -24,6 +24,8 @@ import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
 import { AppHeader } from './components/AppHeader'
 import { CharacterCard } from './components/CharacterCard'
+import { Sidebar } from './components/NavMenu'
+import { useWide } from './lib/use-wide'
 import { EmptyState } from './components/EmptyState'
 
 const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
@@ -71,7 +73,7 @@ function MyCharacters({ isGm, userId }: { isGm: boolean; userId: string }) {
     )
   }
   return (
-    <div className="attack-list">
+    <div className="attack-list card-grid">
       {offline && <p className="chip chip-tech">Нет связи: показаны сохранённые персонажи</p>}
       {characters.map((c, i) => (
         <CharacterCard key={c.id} id={c.id} name={c.name} summary={summaries[c.id]} index={i} />
@@ -137,23 +139,26 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
       <h2 className="section-title">{isGm ? 'Все персонажи' : 'Мои персонажи'}</h2>
       {profile.status === 'ready' && <MyCharacters isGm={isGm} userId={userId} />}
 
-      <div className="action-row">
-        <Link className="btn" to="/diary">
-          Дневник
+      {/* the desktop sidebar already has these links */}
+      <div className="home-links">
+        <div className="action-row">
+          <Link className="btn" to="/diary">
+            Дневник
+          </Link>
+          <Link className="btn" to="/library">
+            Библиотека
+          </Link>
+        </div>
+        <Link className="btn" to="/account">
+          Аккаунт и часовой пояс
         </Link>
-        <Link className="btn" to="/library">
-          Библиотека
+        <Link className="btn" to="/sheet">
+          Открыть лист из файла
+        </Link>
+        <Link to="/status" className="small" style={{ alignSelf: 'center' }}>
+          Проверка доступа
         </Link>
       </div>
-      <Link className="btn" to="/account">
-        Аккаунт и часовой пояс
-      </Link>
-      <Link className="btn" to="/sheet">
-        Открыть лист из файла
-      </Link>
-      <Link to="/status" className="small" style={{ alignSelf: 'center' }}>
-        Проверка доступа
-      </Link>
     </>
   )
 }
@@ -175,7 +180,12 @@ function HomeRoute() {
 }
 
 function App() {
+  const auth = useAuth()
+  const wide = useWide()
+  const sidebar = wide && (auth.status === 'signed-in' || (auth.status === 'signed-out' && isOffline() && !!loadOffline()))
   return (
+    <div className={sidebar ? 'shell with-sidebar' : 'shell'}>
+      {sidebar && <Sidebar />}
     <main className="page">
       <Routes>
         <Route path="/status" element={<StatusPage />} />
@@ -195,6 +205,7 @@ function App() {
         </Route>
       </Routes>
     </main>
+    </div>
   )
 }
 
