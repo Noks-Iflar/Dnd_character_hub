@@ -399,3 +399,67 @@ describe('library', () => {
     expect(bad.ok).toBe(false)
   })
 })
+
+describe('adding library items through the journal', () => {
+  let adb: PGlite
+  let velian = ''
+  let snap = ''
+
+  const add = (uid: string, uuid: string, qty: string, extra = '') =>
+    runAs(
+      adb,
+      uid,
+      `insert into public.changes (character_id, snapshot_id, kind, path, new_value, item_uuid, item_name, item_type${extra ? ', old_value' : ''})
+       values ('${velian}', '${snap}', 'add_item', 'add-item', '${qty}', '${uuid}', 'Зелье лечения', 'consumable'${extra ? `, '${extra}'` : ''}) returning id`,
+    )
+
+  beforeAll(async () => {
+    adb = await createDb()
+    await adb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    await runAs(adb, GM, `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('Compendium.x.Item.potion', 'ag', 'x', 'X', 'items', 'consumable', 'Зелье лечения')`)
+    const c = await runAs(adb, GM, `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1') returning id`)
+    if (!c.ok) throw new Error(c.error)
+    velian = String(c.rows[0]?.id)
+    const s = await runAs(adb, GM, `insert into public.snapshots (character_id, data) values ('${velian}', '{}') returning id`)
+    if (!s.ok) throw new Error(s.error)
+    snap = String(s.rows[0]?.id)
+  })
+
+  it('the owner adds an existing library item with a quantity', async () => {
+    expect((await add(P1, 'Compendium.x.Item.potion', '2')).ok).toBe(true)
+  })
+
+  it('rejects unknown items, bad quantities and other characters', async () => {
+    expect((await add(P1, 'Compendium.x.Item.fake', '1')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', '0')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', '1.5')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', 'true')).ok).toBe(false)
+    expect((await add(P2, 'Compendium.x.Item.potion', '1')).ok).toBe(false)
+  })
+
+  it('old "set" edits still work and cannot carry an item', async () => {
+    const ok = await runAs(adb, P1, `insert into public.changes (character_id, snapshot_id, path, new_value) values ('${velian}', '${snap}', 'system.currency.gp', '5') returning kind`)
+    expect(ok).toEqual({ ok: true, rows: [{ kind: 'set' }] })
+    const bad = await runAs(
+      adb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, path, new_value, item_uuid) values ('${velian}', '${snap}', 'system.currency.gp', '5', 'Compendium.x.Item.potion')`,
+    )
+    expect(bad.ok).toBe(false)
+    const wrongPath = await runAs(
+      adb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, kind, path, new_value, item_uuid, item_name) values ('${velian}', '${snap}', 'add_item', 'system.currency.gp', '1', 'Compendium.x.Item.potion', 'x')`,
+    )
+    expect(wrongPath.ok).toBe(false)
+  })
+
+  it('adding is locked during the game', async () => {
+    await runAs(adb, GM, `update public.characters set status = 'in_game'`)
+    expect((await add(P1, 'Compendium.x.Item.potion', '1')).ok).toBe(false)
+    await runAs(adb, GM, `update public.characters set status = 'between_sessions'`)
+  })
+})
