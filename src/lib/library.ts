@@ -16,6 +16,9 @@ export const CATEGORY_LABEL: Record<LibraryCategory, string> = {
 }
 
 export const ITEM_TYPES = new Set(['weapon', 'equipment', 'consumable', 'tool', 'loot', 'container'])
+/** Library entries a player can add to a character: items (with quantity), spells and feats (one copy). */
+export const ADDABLE_TYPES = new Set([...ITEM_TYPES, 'spell', 'feat'])
+export const isCountable = (type: string | null | undefined): boolean => ITEM_TYPES.has(type ?? '')
 
 export type Source = 'ag' | 'laaru' | 'other'
 

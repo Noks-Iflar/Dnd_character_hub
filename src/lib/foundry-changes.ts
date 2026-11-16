@@ -3,7 +3,7 @@ import type { Character, PendingChange } from './db'
 import { isEditablePath, type ChangeValue } from './snapshot/changes'
 
 export type FileSetChange = { kind: 'set'; path: string; value: ChangeValue; was: ChangeValue | null }
-export type FileAddItem = { kind: 'add_item'; uuid: string; name: string; quantity: number }
+export type FileAddItem = { kind: 'add_item'; uuid: string; name: string; quantity: number; type: string | null }
 
 export type ChangesFile = {
   kind: 'dndhub-changes'
@@ -32,7 +32,7 @@ export function buildChangesFile(characters: Character[], pending: PendingChange
     const adds: FileAddItem[] = []
     for (const c of own) {
       if (c.kind === 'add_item') {
-        if (c.itemUuid && c.itemName && typeof c.newValue === 'number') adds.push({ kind: 'add_item', uuid: c.itemUuid, name: c.itemName, quantity: c.newValue })
+        if (c.itemUuid && c.itemName && typeof c.newValue === 'number') adds.push({ kind: 'add_item', uuid: c.itemUuid, name: c.itemName, quantity: c.newValue, type: c.itemType ?? null })
         continue
       }
       if (!isEditablePath(c.path)) continue

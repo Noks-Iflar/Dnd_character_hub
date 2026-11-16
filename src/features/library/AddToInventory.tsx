@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { addItemChange, type Character } from '../../lib/db'
-import type { LibraryRow } from '../../lib/library'
+import { isCountable, type LibraryRow } from '../../lib/library'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-/** "Add to inventory": records an add_item edit for one of the viewer's characters. */
+/** "Add to character": records an add_item edit (item, spell or feat) for one of the viewer's characters. */
 export function AddToInventory({ row, characters }: { row: LibraryRow; characters: Character[] }) {
   // Empty until the player picks one: the list may arrive after the first render
   const [picked, setCharacterId] = useState('')
@@ -18,14 +18,29 @@ export function AddToInventory({ row, characters }: { row: LibraryRow; character
   const characterId = picked || (characters[0]?.id ?? '')
   const character = characters.find((c) => c.id === characterId)
   const inGame = character?.status === 'in_game'
+  const countable = isCountable(row.type)
+  const what = row.type === 'spell' ? 'заклинание' : row.type === 'feat' ? 'черту' : null
+  const label = what
+    ? characters.length > 1
+      ? `Добавить ${what}`
+      : `Добавить ${what} ${character?.name ?? ''}`.trim()
+    : characters.length > 1
+      ? 'Добавить в инвентарь'
+      : `Добавить ${character?.name ?? ''}`.trim()
 
   async function add() {
     if (!character) return
     setBusy(true)
     setError(null)
     try {
-      await addItemChange({ characterId: character.id, itemUuid: row.uuid, itemName: row.name, itemType: row.type, quantity })
-      setDone(`${row.name} ×${quantity} → ${character.name}. Мастер перенесёт в Foundry перед игрой.`)
+      await addItemChange({
+        characterId: character.id,
+        itemUuid: row.uuid,
+        itemName: row.name,
+        itemType: row.type,
+        quantity: countable ? quantity : 1,
+      })
+      setDone(`${row.name}${countable ? ` ×${quantity}` : ''} → ${character.name}. Мастер перенесёт в Foundry перед игрой.`)
     } catch (e) {
       setError(errorText(e))
     } finally {
@@ -48,18 +63,26 @@ export function AddToInventory({ row, characters }: { row: LibraryRow; character
         </label>
       )}
       <div className="edit-row">
-        <label className="field" style={{ width: 110 }}>
-          Количество
-          <input
-            type="number"
-            min={1}
-            max={999}
-            value={quantity}
-            onChange={(e) => setQuantity(Math.max(1, Math.min(999, Math.trunc(Number(e.target.value)) || 1)))}
-          />
-        </label>
-        <button type="button" className="btn btn-primary" style={{ flex: 1, alignSelf: 'flex-end' }} onClick={add} disabled={busy || inGame}>
-          {busy ? 'Добавляю…' : characters.length > 1 ? 'Добавить в инвентарь' : `Добавить ${character?.name ?? ''}`.trim()}
+        {countable && (
+          <label className="field" style={{ width: 110 }}>
+            Количество
+            <input
+              type="number"
+              min={1}
+              max={999}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Math.min(999, Math.trunc(Number(e.target.value)) || 1)))}
+            />
+          </label>
+        )}
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ flex: 1, alignSelf: 'flex-end' }}
+          onClick={add}
+          disabled={busy || inGame}
+        >
+          {busy ? 'Добавляю…' : label}
         </button>
       </div>
       {inGame && <span className="muted small">{character?.name} сейчас в игре: добавить можно после сессии.</span>}

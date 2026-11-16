@@ -24,7 +24,8 @@ function spellMeta(sp: SheetSpell): string {
 /** "Магия": spell DC and attack, slots, spells grouped by level with a concentration mark. */
 export function MagicTab({ sheet, rollD20 }: TabProps) {
   const slots = sheet.resources.filter((r) => r.kind === 'slot')
-  const levels = [...new Set(sheet.spells.map((s) => s.level))].sort((a, b) => a - b)
+  const pending = sheet.spells.filter((s) => s.pending)
+  const levels = [...new Set(sheet.spells.filter((s) => !s.pending).map((s) => s.level))].sort((a, b) => a - b)
   const classLine = sheet.classes.map((c) => `${c.name} ${c.levels}`).join(' / ')
   const ability = sheet.spellcasting?.ability
 
@@ -90,7 +91,7 @@ export function MagicTab({ sheet, rollD20 }: TabProps) {
                 <div key={level}>
                   <div className="spell-level">{levelTitle(level)}</div>
                   {sheet.spells
-                    .filter((sp) => sp.level === level)
+                    .filter((sp) => sp.level === level && !sp.pending)
                     .map((sp) => (
                       <details key={sp.id} className="list-details">
                         <summary>
@@ -109,6 +110,17 @@ export function MagicTab({ sheet, rollD20 }: TabProps) {
                     ))}
                 </div>
               ))}
+              {pending.length > 0 && (
+                <div>
+                  <div className="spell-level">Из библиотеки, ждут мастера</div>
+                  {pending.map((sp) => (
+                    <div key={sp.id} className="list-row static">
+                      <span className="grow">{sp.name}</span>
+                      <span className="chip chip-blood">ждёт мастера</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>

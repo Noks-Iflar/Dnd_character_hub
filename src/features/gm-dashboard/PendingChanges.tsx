@@ -46,7 +46,8 @@ export function PendingChanges({
             {c.kind === 'add_item' ? (
               <>
                 <span>Добавить: </span>
-                <strong>{c.itemName ?? 'предмет'}</strong> ×{describeValue(c.newValue)}
+                <strong>{c.itemName ?? 'предмет'}</strong>
+                {c.itemType === 'spell' ? ' (заклинание)' : c.itemType === 'feat' ? ' (черта)' : ` ×${describeValue(c.newValue)}`}
                 <span className="muted small"> · из библиотеки</span>
               </>
             ) : (

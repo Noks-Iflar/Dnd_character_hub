@@ -55,8 +55,10 @@ export type SheetSpell = {
   range: string | null
   duration: string | null
   concentration: boolean
+  /** added from the library in the app, not yet in Foundry */
+  pending: boolean
 }
-export type SheetFeature = { id: string; name: string; description: string }
+export type SheetFeature = { id: string; name: string; description: string; pending: boolean }
 export type SheetDamage = { formula: string; type: string | null }
 export type SheetAttack = {
   id: string
@@ -352,11 +354,12 @@ export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Shee
         description: description(i),
         ...spellLabels(c, str(i._id) ?? ''),
         concentration: arr(get(i, 'system', 'properties')).includes('concentration'),
+        pending: get(i, 'flags', 'dndhub', 'pending') === true,
       }))
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)),
     features: all
       .filter((i) => i.type === 'feat')
-      .map((i) => ({ id: str(i._id) ?? '', name: str(i.name) ?? '', description: description(i) })),
+      .map((i) => ({ id: str(i._id) ?? '', name: str(i.name) ?? '', description: description(i), pending: get(i, 'flags', 'dndhub', 'pending') === true })),
     attacks: computedAttacks(c),
     resources: resources(c, src),
     hitDice: classItems.map((cls) => ({

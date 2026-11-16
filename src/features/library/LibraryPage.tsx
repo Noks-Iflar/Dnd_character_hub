@@ -3,7 +3,7 @@ import { AppHeader } from '../../components/AppHeader'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
 import {
   CATEGORY_LABEL,
-  ITEM_TYPES,
+  ADDABLE_TYPES,
   libraryDescription,
   listLibrary,
   parseLibraryExport,
@@ -46,7 +46,7 @@ function Entry({ row, characters }: { row: LibraryRow; characters: Character[] }
           </span>
         </span>
       </summary>
-      {ITEM_TYPES.has(row.type) && <AddToInventory row={row} characters={characters} />}
+      {ADDABLE_TYPES.has(row.type) && <AddToInventory row={row} characters={characters} />}
       {error && <p className="error description">{error}</p>}
       {html === null && !error && <p className="muted description">Загружаю описание…</p>}
       {html !== null && (html ? <div className="description" dangerouslySetInnerHTML={{ __html: html }} /> : <p className="muted description">Описания нет.</p>)}
