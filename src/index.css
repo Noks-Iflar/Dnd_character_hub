@@ -157,6 +157,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* the corner splatter sticks out on the right; clip it instead of scrolling sideways */
+  overflow-x: clip;
 }
 /* Ink splatter in the top right corner of every screen */
 .page::before {
@@ -1329,4 +1331,116 @@ details.add-entry > summary::-webkit-details-marker {
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px 4px;
+}
+
+/* ---- planner ---- */
+.next-session {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.next-session-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.next-session-date {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+}
+.people-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.person-time {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-small1);
+  font-size: 14px;
+}
+.week-nav {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+}
+.week-nav .icon-btn {
+  font-size: 26px;
+}
+.week-nav .icon-btn:disabled {
+  opacity: 0.3;
+}
+.planner-grid {
+  display: grid;
+  grid-template-columns: 44px repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.planner-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.planner-day span {
+  font-size: 12px;
+}
+.planner-hour {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+/* Cell shade grows with the share of people free; everyone free = solid blue */
+.planner-cell {
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px 4px 6px 3px / 4px 6px 3px 7px;
+  background: color-mix(in srgb, var(--tech) calc(var(--level, 0) * 32%), var(--surface));
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.planner-cell.mine {
+  border: 2px solid var(--text);
+}
+.planner-cell.all {
+  background: var(--tech);
+  color: var(--bg);
+}
+.planner-cell:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.planner-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.planner-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-box {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+.legend-box.mine {
+  border: 2px solid var(--text);
+}
+.legend-box.all {
+  background: var(--tech);
 }

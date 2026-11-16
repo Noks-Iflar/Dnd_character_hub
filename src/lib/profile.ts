@@ -65,3 +65,10 @@ export function useProfile(userId: string): ProfileState {
 
   return state
 }
+
+/** Own name and time zone (the only profile fields a user may change). */
+export async function updateOwnProfile(id: string, fields: { display_name: string; timezone: string }): Promise<void> {
+  if (!supabase) throw new Error('Приложение не подключено к серверу.')
+  const { error } = await supabase.from('profiles').update(fields).eq('id', id)
+  if (error) throw new Error(/timezone/i.test(error.message) ? 'Такого часового пояса нет.' : error.message)
+}

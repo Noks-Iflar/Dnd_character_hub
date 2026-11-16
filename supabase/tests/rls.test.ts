@@ -20,8 +20,13 @@ beforeAll(async () => {
 
 describe('profiles', () => {
   it('are created automatically from the email', async () => {
-    const r = await runAs(db, P1, 'select display_name, role from public.profiles')
+    const r = await runAs(db, P1, `select display_name, role from public.profiles where id = '${P1}'`)
     expect(r).toEqual({ ok: true, rows: [{ display_name: 'anya', role: 'player' }] })
+  })
+
+  it('names and time zones of others are visible to players (0008), not to anonymous visitors', async () => {
+    const r = await runAs(db, P1, 'select id from public.profiles')
+    expect(r.ok && r.rows.length).toBe(3)
   })
 
   it('gm sees all profiles', async () => {
@@ -486,5 +491,41 @@ describe('deleting a character', () => {
       const left = await xdb.query(`select count(*)::int as n from public.${table}`)
       expect(left.rows, table).toEqual([{ n: 0 }])
     }
+  })
+})
+
+describe('planner', () => {
+  let pdb: PGlite
+
+  beforeAll(async () => {
+    pdb = await createDb()
+    await pdb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+  })
+
+  it('a player sets a real time zone, not a made-up one', async () => {
+    expect((await runAs(pdb, P1, `update public.profiles set timezone = 'Europe/Berlin' where id = '${P1}' returning id`)).ok).toBe(true)
+    expect((await runAs(pdb, P1, `update public.profiles set timezone = 'Mars/Olympus' where id = '${P1}'`)).ok).toBe(false)
+  })
+
+  it('everyone marks only their own free time, in 30-minute UTC slots, and sees everyone else', async () => {
+    expect((await runAs(pdb, P1, `insert into public.availability (slot_start) values ('2026-12-05 16:00+00'), ('2026-12-05 16:30+00') returning user_id`)).ok).toBe(true)
+    expect((await runAs(pdb, P2, `insert into public.availability (slot_start) values ('2026-12-05 16:00+00')`)).ok).toBe(true)
+    expect((await runAs(pdb, P1, `insert into public.availability (user_id, slot_start) values ('${P2}', '2026-12-05 17:00+00')`)).ok).toBe(false)
+    expect((await runAs(pdb, P1, `insert into public.availability (slot_start) values ('2026-12-05 16:10+00')`)).ok).toBe(false)
+    const all = await runAs(pdb, P2, 'select user_id from public.availability')
+    expect(all.ok && all.rows.length).toBe(3)
+    expect(await runAs(pdb, P2, `delete from public.availability where user_id = '${P1}' returning slot_start`)).toEqual({ ok: true, rows: [] })
+    const own = await runAs(pdb, P1, `delete from public.availability where user_id = '${P1}' returning slot_start`)
+    expect(own.ok && own.rows.length).toBe(2)
+  })
+
+  it('only the GM sets sessions; everyone signed in sees them', async () => {
+    expect((await runAs(pdb, P1, `insert into public.planned_sessions (starts_at) values ('2026-12-05 16:00+00')`)).ok).toBe(false)
+    expect((await runAs(pdb, GM, `insert into public.planned_sessions (starts_at, note) values ('2026-12-05 16:00+00', 'Сессия 6')`)).ok).toBe(true)
+    expect(await runAs(pdb, P2, 'select note from public.planned_sessions')).toEqual({ ok: true, rows: [{ note: 'Сессия 6' }] })
+    expect(await runAs(pdb, null, 'select note from public.planned_sessions')).toEqual({ ok: true, rows: [] })
   })
 })
