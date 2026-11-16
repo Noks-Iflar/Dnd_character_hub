@@ -151,14 +151,25 @@ function toChange(row: unknown): Change | null {
   const newValue = changeValue(row.new_value)
   const createdAt = str(row.created_at)
   if (!id || !path || newValue === null || !createdAt) return null
-  return { id, path, oldValue: changeValue(row.old_value), newValue, createdAt, appliedAt: str(row.applied_at) }
+  return {
+    id,
+    kind: row.kind === 'add_item' ? 'add_item' : 'set',
+    itemUuid: str(row.item_uuid),
+    itemName: str(row.item_name),
+    itemType: str(row.item_type),
+    path,
+    oldValue: changeValue(row.old_value),
+    newValue,
+    createdAt,
+    appliedAt: str(row.applied_at),
+  }
 }
 
 /** Edits made on top of one snapshot, oldest first. */
 export async function listChanges(snapshotId: string): Promise<Change[]> {
   const { data, error } = await client()
     .from('changes')
-    .select('id, path, old_value, new_value, created_at, applied_at')
+    .select('id, kind, item_uuid, item_name, item_type, path, old_value, new_value, created_at, applied_at')
     .eq('snapshot_id', snapshotId)
     .order('created_at')
   if (error) throw new Error(error.message)
@@ -201,7 +212,7 @@ export type PendingChange = Change & { characterId: string; snapshotId: string }
 export async function listPendingChanges(): Promise<PendingChange[]> {
   const { data, error } = await client()
     .from('changes')
-    .select('id, character_id, snapshot_id, path, old_value, new_value, created_at, applied_at')
+    .select('id, character_id, snapshot_id, kind, item_uuid, item_name, item_type, path, old_value, new_value, created_at, applied_at')
     .is('applied_at', null)
     .order('created_at')
   if (error) throw new Error(error.message)
@@ -280,4 +291,34 @@ export async function getSnapshot(snapshotId: string): Promise<StoredSnapshot | 
   const parsed = parseSnapshotJson(JSON.stringify(get(data, 'data')))
   if (!parsed.ok || !parsed.snapshots[0]) throw new Error(`Снимок повреждён: ${parsed.ok ? 'пусто' : parsed.error}`)
   return { id: str(get(data, 'id')) ?? '', snapshot: parsed.snapshots[0], createdAt: str(get(data, 'created_at')) ?? '' }
+}
+
+/** Id of the latest snapshot of a character (new edits attach to it). */
+export async function latestSnapshotId(characterId: string): Promise<string | null> {
+  const { data, error } = await client()
+    .from('snapshots')
+    .select('id')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return str(get(data, 'id'))
+}
+
+/** Records "add N of this library item" for a character, on top of its latest snapshot. */
+export async function addItemChange(input: { characterId: string; itemUuid: string; itemName: string; itemType: string; quantity: number }) {
+  const snapshotId = await latestSnapshotId(input.characterId)
+  if (!snapshotId) throw new Error('У персонажа ещё нет снимка из Foundry.')
+  const { error } = await client().from('changes').insert({
+    character_id: input.characterId,
+    snapshot_id: snapshotId,
+    kind: 'add_item',
+    path: 'add-item',
+    new_value: input.quantity,
+    item_uuid: input.itemUuid,
+    item_name: input.itemName,
+    item_type: input.itemType,
+  })
+  if (error) throw new Error(describeWriteError(error.message))
 }

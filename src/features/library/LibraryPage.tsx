@@ -4,6 +4,7 @@ import { AppHeader } from '../../components/AppHeader'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
 import {
   CATEGORY_LABEL,
+  ITEM_TYPES,
   libraryDescription,
   listLibrary,
   parseLibraryExport,
@@ -12,7 +13,9 @@ import {
   type LibraryImportRow,
   type LibraryRow,
 } from '../../lib/library'
+import { listCharacters, type Character } from '../../lib/db'
 import { useViewer } from '../lore/useViewer'
+import { AddToInventory } from './AddToInventory'
 import { matches, metaLine, priceInCopper, RARITY_LABEL, RARITY_ORDER, rarityRank, TYPE_LABEL } from './labels'
 
 type Sort = 'name' | 'price' | 'rarity' | 'level'
@@ -22,7 +25,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 // Loaded once per visit; the catalogue is large and rarely changes
 let cache: LibraryRow[] | null = null
 
-function Entry({ row, children }: { row: LibraryRow; children?: React.ReactNode }) {
+function Entry({ row, characters }: { row: LibraryRow; characters: Character[] }) {
   const [html, setHtml] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   return (
@@ -44,7 +47,7 @@ function Entry({ row, children }: { row: LibraryRow; children?: React.ReactNode 
           </span>
         </span>
       </summary>
-      {children}
+      {ITEM_TYPES.has(row.type) && <AddToInventory row={row} characters={characters} />}
       {error && <p className="error description">{error}</p>}
       {html === null && !error && <p className="muted description">Загружаю описание…</p>}
       {html !== null && (html ? <div className="description" dangerouslySetInnerHTML={{ __html: html }} /> : <p className="muted description">Описания нет.</p>)}
@@ -54,7 +57,8 @@ function Entry({ row, children }: { row: LibraryRow; children?: React.ReactNode 
 
 /** Compendium catalogue: search, sections, filters, sorting; the GM uploads the export here. */
 export function LibraryPage() {
-  const { isGm } = useViewer()
+  const { isGm, userId } = useViewer()
+  const [characters, setCharacters] = useState<Character[]>([])
   const [rows, setRows] = useState<LibraryRow[] | null>(cache)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
@@ -81,6 +85,17 @@ export function LibraryPage() {
       cancelled = true
     }
   }, [version])
+
+  // Characters the viewer may add items to: own ones (the GM: all)
+  useEffect(() => {
+    let cancelled = false
+    listCharacters()
+      .then((list) => !cancelled && setCharacters(isGm ? list : list.filter((c) => c.ownerId === userId)))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isGm, userId])
 
   const inCategory = useMemo(() => (rows ?? []).filter((r) => r.category === category), [rows, category])
   const types = useMemo(() => [...new Set(inCategory.map((r) => r.type))].sort(), [inCategory])
@@ -264,7 +279,7 @@ export function LibraryPage() {
           {result.length > 0 && (
             <div className="card list">
               {result.slice(0, shown).map((r) => (
-                <Entry key={r.uuid} row={r} />
+                <Entry key={r.uuid} row={r} characters={characters} />
               ))}
             </div>
           )}

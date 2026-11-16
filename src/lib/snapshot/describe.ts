@@ -21,6 +21,7 @@ const ITEM_FIELD: Record<string, string> = {
 
 /** Human-readable name of an edited field, using item names from the actor source when available. */
 export function describePath(path: string, source?: JsonObject | null): string {
+  if (path === 'add-item') return 'Добавить предмет'
   const fixed = FIXED[path]
   if (fixed) return fixed
   let m = /^system\.currency\.(\w+)$/.exec(path)

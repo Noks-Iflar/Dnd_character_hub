@@ -54,6 +54,34 @@ describe('applyChanges', () => {
     expect([...editedPaths].sort()).toEqual(['items.abcdefghij012345.system.equipped', 'system.attributes.hp.value', 'system.currency.gp'])
   })
 
+  it('adds library items as pending inventory entries', () => {
+    const add: Change = {
+      id: 'c42',
+      kind: 'add_item',
+      itemUuid: 'Compendium.x.Item.potion',
+      itemName: 'Зелье лечения',
+      itemType: 'consumable',
+      path: 'add-item',
+      oldValue: null,
+      newValue: 2,
+      createdAt: '2026-11-16T10:00:00Z',
+      appliedAt: null,
+    }
+    const { snapshot: edited, editedPaths } = applyChanges(snapshot, [add])
+    const sheet = buildSheet(edited, { editedPaths })
+    expect(sheet.inventory.find((i) => i.pending)).toEqual({
+      id: 'pending-c42',
+      name: 'Зелье лечения',
+      type: 'consumable',
+      quantity: 2,
+      equipped: false,
+      description: '',
+      pending: true,
+    })
+    expect(sheet.inventory.find((i) => i.name === 'Меч')?.pending).toBe(false)
+    expect((snapshot.source.items as unknown[]).length).toBe(1) // snapshot untouched
+  })
+
   it('skips forbidden paths and items that are gone', () => {
     const { snapshot: edited, editedPaths } = applyChanges(snapshot, [
       change('system.abilities.str.value', 30),

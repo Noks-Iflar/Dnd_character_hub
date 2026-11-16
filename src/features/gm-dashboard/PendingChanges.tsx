@@ -26,10 +26,12 @@ export function PendingChanges({
   }
 
   // One line per field: value before the first edit -> value after the last edit
+  // Each added item is its own line
   const latestByPath = new Map<string, PendingChange>()
   for (const c of changes) {
-    const first = latestByPath.get(c.path)
-    latestByPath.set(c.path, first ? { ...c, oldValue: first.oldValue } : c)
+    const key = c.kind === 'add_item' ? `add:${c.id}` : c.path
+    const first = latestByPath.get(key)
+    latestByPath.set(key, first ? { ...c, oldValue: first.oldValue } : c)
   }
 
   return (
@@ -41,8 +43,18 @@ export function PendingChanges({
       <ul className="plain-list" style={{ padding: '10px 14px' }}>
         {[...latestByPath.values()].map((c) => (
           <li key={c.id}>
-            <span>{describePath(c.path, source)}: </span>
-            <span className="muted">{describeValue(c.oldValue)}</span> → <strong>{describeValue(c.newValue)}</strong>
+            {c.kind === 'add_item' ? (
+              <>
+                <span>Добавить: </span>
+                <strong>{c.itemName ?? 'предмет'}</strong> ×{describeValue(c.newValue)}
+                <span className="muted small"> · из библиотеки</span>
+              </>
+            ) : (
+              <>
+                <span>{describePath(c.path, source)}: </span>
+                <span className="muted">{describeValue(c.oldValue)}</span> → <strong>{describeValue(c.newValue)}</strong>
+              </>
+            )}
             <span className="muted small"> · {formatDateTime(c.createdAt)}</span>
           </li>
         ))}

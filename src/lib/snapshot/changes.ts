@@ -3,9 +3,16 @@ import type { Snapshot } from './types'
 
 export type ChangeValue = number | boolean
 
-/** One journal entry: "field at `path` became `newValue`". */
+/**
+ * One journal entry. kind "set": "field at `path` became `newValue`".
+ * kind "add_item": add `newValue` pieces of the library item `itemUuid` (path is "add-item").
+ */
 export type Change = {
   id: string
+  kind?: 'set' | 'add_item'
+  itemUuid?: string | null
+  itemName?: string | null
+  itemType?: string | null
   path: string
   oldValue: ChangeValue | null
   newValue: ChangeValue
@@ -30,6 +37,11 @@ export function isEditablePath(path: string): boolean {
 }
 
 export const itemPath = (itemId: string, field: string): string => `items.${itemId}.system.${field}`
+
+export const ADD_ITEM_PATH = 'add-item'
+
+/** Id of the placeholder item shown on the sheet until the GM adds the real one in Foundry. */
+export const pendingItemId = (changeId: string): string => `pending-${changeId}`
 
 /** Reads the current value at an editable path of the actor source. */
 export function readPath(source: JsonObject, path: string): unknown {
@@ -76,6 +88,19 @@ export function applyChanges(snapshot: Snapshot, changes: Change[]): { snapshot:
   const editedPaths = new Set<string>()
   const ordered = [...changes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   for (const change of ordered) {
+    if (change.kind === 'add_item') {
+      if (typeof change.newValue !== 'number' || !change.itemName) continue
+      const items = Array.isArray(source.items) ? source.items : (source.items = [])
+      items.push({
+        _id: pendingItemId(change.id),
+        name: change.itemName,
+        type: change.itemType ?? 'loot',
+        system: { quantity: change.newValue, equipped: false, description: { value: '' } },
+        flags: { dndhub: { pending: true, uuid: change.itemUuid ?? null } },
+      })
+      editedPaths.add(ADD_ITEM_PATH)
+      continue
+    }
     if (!isEditablePath(change.path)) continue
     if (writePath(source, change.path, change.newValue)) editedPaths.add(change.path)
   }

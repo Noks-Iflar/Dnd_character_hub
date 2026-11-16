@@ -1324,3 +1324,9 @@ details.add-entry > summary::-webkit-details-marker {
   -webkit-appearance: none;
   appearance: none;
 }
+.add-to-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 4px;
+}
