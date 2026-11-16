@@ -42,7 +42,8 @@ const INVENTORY_TYPES = new Set(['weapon', 'equipment', 'consumable', 'tool', 'l
 export type SheetAbility = { key: AbilityKey; label: string; score: number | null; mod: Stat; save: Stat; saveProficient: boolean }
 export type SheetSkill = { key: string; label: string; ability: AbilityKey; total: Stat; passive: Stat; proficiency: number }
 export type SheetClass = { name: string; levels: number; subclass: string | null }
-export type SheetItem = { id: string; name: string; type: string; quantity: number; equipped: boolean; description: string }
+/** `pending`: added from the library in the app, not yet in Foundry. */
+export type SheetItem = { id: string; name: string; type: string; quantity: number; equipped: boolean; description: string; pending: boolean }
 export type SheetSpell = {
   id: string
   name: string
@@ -339,6 +340,7 @@ export function buildSheet(snapshot: Snapshot, options: BuildOptions = {}): Shee
         quantity: num(get(i, 'system', 'quantity')) ?? 1,
         equipped: bool(get(i, 'system', 'equipped')),
         description: description(i),
+        pending: get(i, 'flags', 'dndhub', 'pending') === true,
       })),
     spells: all
       .filter((i) => i.type === 'spell')

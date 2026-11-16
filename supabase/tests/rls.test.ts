@@ -366,3 +366,100 @@ describe('diary', () => {
     expect(d.ok && d.rows.length).toBe(1)
   })
 })
+
+describe('library', () => {
+  let ldb: PGlite
+  const row = (uuid: string) =>
+    `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('${uuid}', 'ag', 'p', 'P', 'items', 'weapon', 'Кинжал')`
+
+  beforeAll(async () => {
+    ldb = await createDb()
+    await ldb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+  })
+
+  it('the GM loads and replaces entries; players only read', async () => {
+    expect((await runAs(ldb, GM, row('u1'))).ok).toBe(true)
+    expect((await runAs(ldb, P1, row('u2'))).ok).toBe(false)
+    expect(await runAs(ldb, P1, 'select name from public.library')).toEqual({ ok: true, rows: [{ name: 'Кинжал' }] })
+    expect(await runAs(ldb, P1, `update public.library set name = 'x' returning uuid`)).toEqual({ ok: true, rows: [] })
+    expect(await runAs(ldb, P1, 'delete from public.library returning uuid')).toEqual({ ok: true, rows: [] })
+    const upsert = await runAs(ldb, GM, `${row('u1')} on conflict (uuid) do update set name = 'Кинжал +1' returning name`)
+    expect(upsert).toEqual({ ok: true, rows: [{ name: 'Кинжал +1' }] })
+  })
+
+  it('anonymous visitors see nothing', async () => {
+    expect(await runAs(ldb, null, 'select uuid from public.library')).toEqual({ ok: true, rows: [] })
+  })
+
+  it('unknown categories are rejected', async () => {
+    const bad = await runAs(ldb, GM, `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('u9', 'ag', 'p', 'P', 'monsters', 'npc', 'x')`)
+    expect(bad.ok).toBe(false)
+  })
+})
+
+describe('adding library items through the journal', () => {
+  let adb: PGlite
+  let velian = ''
+  let snap = ''
+
+  const add = (uid: string, uuid: string, qty: string, extra = '') =>
+    runAs(
+      adb,
+      uid,
+      `insert into public.changes (character_id, snapshot_id, kind, path, new_value, item_uuid, item_name, item_type${extra ? ', old_value' : ''})
+       values ('${velian}', '${snap}', 'add_item', 'add-item', '${qty}', '${uuid}', 'Зелье лечения', 'consumable'${extra ? `, '${extra}'` : ''}) returning id`,
+    )
+
+  beforeAll(async () => {
+    adb = await createDb()
+    await adb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    await runAs(adb, GM, `insert into public.library (uuid, source, pack, pack_label, category, type, name) values ('Compendium.x.Item.potion', 'ag', 'x', 'X', 'items', 'consumable', 'Зелье лечения')`)
+    const c = await runAs(adb, GM, `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1') returning id`)
+    if (!c.ok) throw new Error(c.error)
+    velian = String(c.rows[0]?.id)
+    const s = await runAs(adb, GM, `insert into public.snapshots (character_id, data) values ('${velian}', '{}') returning id`)
+    if (!s.ok) throw new Error(s.error)
+    snap = String(s.rows[0]?.id)
+  })
+
+  it('the owner adds an existing library item with a quantity', async () => {
+    expect((await add(P1, 'Compendium.x.Item.potion', '2')).ok).toBe(true)
+  })
+
+  it('rejects unknown items, bad quantities and other characters', async () => {
+    expect((await add(P1, 'Compendium.x.Item.fake', '1')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', '0')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', '1.5')).ok).toBe(false)
+    expect((await add(P1, 'Compendium.x.Item.potion', 'true')).ok).toBe(false)
+    expect((await add(P2, 'Compendium.x.Item.potion', '1')).ok).toBe(false)
+  })
+
+  it('old "set" edits still work and cannot carry an item', async () => {
+    const ok = await runAs(adb, P1, `insert into public.changes (character_id, snapshot_id, path, new_value) values ('${velian}', '${snap}', 'system.currency.gp', '5') returning kind`)
+    expect(ok).toEqual({ ok: true, rows: [{ kind: 'set' }] })
+    const bad = await runAs(
+      adb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, path, new_value, item_uuid) values ('${velian}', '${snap}', 'system.currency.gp', '5', 'Compendium.x.Item.potion')`,
+    )
+    expect(bad.ok).toBe(false)
+    const wrongPath = await runAs(
+      adb,
+      P1,
+      `insert into public.changes (character_id, snapshot_id, kind, path, new_value, item_uuid, item_name) values ('${velian}', '${snap}', 'add_item', 'system.currency.gp', '1', 'Compendium.x.Item.potion', 'x')`,
+    )
+    expect(wrongPath.ok).toBe(false)
+  })
+
+  it('adding is locked during the game', async () => {
+    await runAs(adb, GM, `update public.characters set status = 'in_game'`)
+    expect((await add(P1, 'Compendium.x.Item.potion', '1')).ok).toBe(false)
+    await runAs(adb, GM, `update public.characters set status = 'between_sessions'`)
+  })
+})

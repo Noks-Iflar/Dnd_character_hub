@@ -1303,3 +1303,30 @@ details.add-entry > summary::-webkit-details-marker {
 .danger-btn {
   color: var(--blood-text);
 }
+
+/* ---- library ---- */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-row .toggle {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.field input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.add-to-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 4px;
+}

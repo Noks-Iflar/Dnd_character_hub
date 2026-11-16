@@ -54,6 +54,34 @@ describe('applyChanges', () => {
     expect([...editedPaths].sort()).toEqual(['items.abcdefghij012345.system.equipped', 'system.attributes.hp.value', 'system.currency.gp'])
   })
 
+  it('adds library items as pending inventory entries', () => {
+    const add: Change = {
+      id: 'c42',
+      kind: 'add_item',
+      itemUuid: 'Compendium.x.Item.potion',
+      itemName: 'Зелье лечения',
+      itemType: 'consumable',
+      path: 'add-item',
+      oldValue: null,
+      newValue: 2,
+      createdAt: '2026-11-16T10:00:00Z',
+      appliedAt: null,
+    }
+    const { snapshot: edited, editedPaths } = applyChanges(snapshot, [add])
+    const sheet = buildSheet(edited, { editedPaths })
+    expect(sheet.inventory.find((i) => i.pending)).toEqual({
+      id: 'pending-c42',
+      name: 'Зелье лечения',
+      type: 'consumable',
+      quantity: 2,
+      equipped: false,
+      description: '',
+      pending: true,
+    })
+    expect(sheet.inventory.find((i) => i.name === 'Меч')?.pending).toBe(false)
+    expect((snapshot.source.items as unknown[]).length).toBe(1) // snapshot untouched
+  })
+
   it('skips forbidden paths and items that are gone', () => {
     const { snapshot: edited, editedPaths } = applyChanges(snapshot, [
       change('system.abilities.str.value', 30),
@@ -64,35 +92,37 @@ describe('applyChanges', () => {
   })
 })
 
-const PARTY = join(import.meta.dirname, '..', '..', '..', 'fixtures', 'snapshots', 'party-2026-11-15.json')
+const PARTY = join(import.meta.dirname, '..', '..', '..', 'fixtures', 'snapshots', 'party.json')
 
-describe.skipIf(!existsSync(PARTY))('edits on the real barbarian snapshot', () => {
-  const barbarian = () => {
+describe.skipIf(!existsSync(PARTY))('edits on the real fighter snapshot', () => {
+  const fighter = () => {
     const r = parseSnapshotJson(readFileSync(PARTY, 'utf8'))
     if (!r.ok) throw new Error(r.error)
-    return r.snapshots[1] as Snapshot
+    const s = r.snapshots.find((x) => x.source.name === 'Мерик')
+    if (!s) throw new Error('fixture changed')
+    return s
   }
 
-  it('HP, rage uses, gold and armor show up on the sheet', () => {
-    const base = barbarian()
+  it('HP, second wind, gold and armor show up on the sheet', () => {
+    const base = fighter()
     const before = buildSheet(base)
-    const rage = before.resources.find((r) => r.name === 'Rage')
-    const armor = before.inventory.find((i) => i.name === 'Hide Armor')
-    if (!rage || !armor) throw new Error('fixture changed')
+    const wind = before.resources.find((r) => r.name.startsWith('Второе дыхание'))
+    const armor = before.inventory.find((i) => i.type === 'equipment' && i.equipped)
+    if (!wind || !armor) throw new Error('fixture changed')
 
     const { snapshot: edited, editedPaths } = applyChanges(base, [
-      change('system.attributes.hp.value', 20),
-      change(rage.path, 1), // one rage spent
+      change('system.attributes.hp.value', 40),
+      change(wind.path, 2), // two uses spent
       change('system.currency.gp', 12),
       change(`items.${armor.id}.system.equipped`, false),
     ])
     const after = buildSheet(edited, { editedPaths })
-    expect(after.hp.value).toBe(20)
-    expect(after.hp.max).toEqual({ value: 35, from: 'foundry' })
-    expect(after.resources.find((r) => r.name === 'Rage')).toMatchObject({ value: 2, max: 3 })
+    expect(after.hp.value).toBe(40)
+    expect(after.hp.max).toEqual({ value: 94, from: 'foundry' })
+    expect(after.resources.find((r) => r.name.startsWith('Второе дыхание'))).toMatchObject({ value: 1, max: 3 })
     expect(after.currency.gp).toBe(12)
-    expect(after.inventory.find((i) => i.name === 'Hide Armor')?.equipped).toBe(false)
-    expect(after.ac).toEqual({ value: 14, from: 'estimate' }) // Foundry will recalculate
+    expect(after.inventory.find((i) => i.id === armor.id)?.equipped).toBe(false)
+    expect(after.ac).toEqual({ value: 21, from: 'estimate' }) // Foundry will recalculate
     expect(before.ac.from).toBe('foundry')
   })
 })

@@ -45,8 +45,12 @@ export function GearTab({ sheet, edit }: TabProps) {
                   {it.quantity !== 1 ? ` ×${it.quantity}` : ''}
                 </span>
                 {it.equipped && <span className="chip chip-tech">надето</span>}
+                {it.pending && <span className="chip chip-blood">ждёт мастера</span>}
               </summary>
-              {edit && (
+              {it.pending && (
+                <p className="muted small description">Добавлено из библиотеки. Мастер перенесёт предмет в Foundry перед игрой.</p>
+              )}
+              {edit && !it.pending && (
                 <div className="edit-row" style={{ padding: '10px 14px 0' }}>
                   {EQUIPPABLE.has(it.type) && (
                     <button
