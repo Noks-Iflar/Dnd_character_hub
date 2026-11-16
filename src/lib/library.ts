@@ -1,5 +1,6 @@
 // Compendium library: turning a Foundry export into catalogue rows, removing duplicates.
 import { arr, get, isObject, num, str, type JsonObject } from './snapshot/read'
+import { supabase } from './supabase'
 
 export type LibraryCategory = 'items' | 'spells' | 'feats' | 'origins' | 'classes' | 'features' | 'bastions' | 'rules'
 
@@ -147,3 +148,98 @@ export function parseLibraryExport(text: string): LibraryParse {
   if (!rows.length) return { ok: false, error: 'В файле нет записей.' }
   return { ok: true, rows, total: entries.length, duplicates }
 }
+
+// ---- database ----
+
+const LIST_COLUMNS =
+  'uuid, source, pack, pack_label, category, type, subtype, name, name_en, rarity, level, school, price_value, price_denomination, weight, attunement, properties'
+
+function client() {
+  if (!supabase) throw new Error('Приложение не подключено к серверу.')
+  return supabase
+}
+
+const CATEGORIES = new Set<string>(Object.keys(CATEGORY_LABEL))
+
+function fromDb(r: unknown): LibraryRow | null {
+  const uuid = str(get(r, 'uuid'))
+  const name = str(get(r, 'name'))
+  const category = str(get(r, 'category'))
+  if (!uuid || !name || !category || !CATEGORIES.has(category)) return null
+  const source = str(get(r, 'source'))
+  return {
+    uuid,
+    source: source === 'ag' || source === 'laaru' ? source : 'other',
+    pack: str(get(r, 'pack')) ?? '',
+    packLabel: str(get(r, 'pack_label')) ?? '',
+    category: category as LibraryCategory,
+    type: str(get(r, 'type')) ?? '',
+    subtype: str(get(r, 'subtype')),
+    name,
+    nameEn: str(get(r, 'name_en')),
+    rarity: str(get(r, 'rarity')),
+    level: num(get(r, 'level')),
+    school: str(get(r, 'school')),
+    priceValue: num(get(r, 'price_value')),
+    priceDenomination: str(get(r, 'price_denomination')),
+    weight: num(get(r, 'weight')),
+    attunement: str(get(r, 'attunement')),
+    properties: arr(get(r, 'properties')).filter((p): p is string => typeof p === 'string'),
+  }
+}
+
+/** The whole catalogue without descriptions (about 1 MB), loaded in pages of 1000. */
+export async function listLibrary(): Promise<LibraryRow[]> {
+  const out: LibraryRow[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await client().from('library').select(LIST_COLUMNS).order('uuid').range(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []).map(fromDb).filter((r): r is LibraryRow => r !== null)
+    out.push(...rows)
+    if ((data ?? []).length < PAGE) break
+  }
+  return out
+}
+
+export async function libraryDescription(uuid: string): Promise<string> {
+  const { data, error } = await client().from('library').select('description').eq('uuid', uuid).maybeSingle()
+  if (error) throw new Error(error.message)
+  return str(get(data, 'description')) ?? ''
+}
+
+/** GM: upsert all rows in batches, then remove entries that are no longer in the export. */
+export async function uploadLibrary(rows: LibraryImportRow[], onProgress: (done: number) => void): Promise<number> {
+  const startedAt = new Date().toISOString()
+  const BATCH = 400
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH).map((r) => ({
+      uuid: r.uuid,
+      source: r.source,
+      pack: r.pack,
+      pack_label: r.packLabel,
+      category: r.category,
+      type: r.type,
+      subtype: r.subtype,
+      name: r.name,
+      name_en: r.nameEn,
+      rarity: r.rarity,
+      level: r.level,
+      school: r.school,
+      price_value: r.priceValue,
+      price_denomination: r.priceDenomination,
+      weight: r.weight,
+      attunement: r.attunement,
+      properties: r.properties,
+      description: r.description,
+      imported_at: startedAt,
+    }))
+    const { error } = await client().from('library').upsert(batch, { onConflict: 'uuid' })
+    if (error) throw new Error(/row-level security/i.test(error.message) ? 'Загружать библиотеку может только мастер.' : error.message)
+    onProgress(Math.min(rows.length, i + BATCH))
+  }
+  const { error, count } = await client().from('library').delete({ count: 'exact' }).lt('imported_at', startedAt)
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
