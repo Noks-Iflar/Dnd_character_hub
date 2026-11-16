@@ -1605,3 +1605,58 @@ details.add-entry > summary::-webkit-details-marker {
   flex-direction: column;
   gap: 16px;
 }
+
+/* ---- desktop sheet: "Лист" on the left, chosen tab on the right ---- */
+.sheet-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.sheet-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.sheet-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 4px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.sheet-tabs button {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.sheet-tabs button:hover {
+  color: var(--text);
+}
+.sheet-tabs button[aria-current='page'] {
+  color: var(--text);
+  font-weight: 700;
+  background:
+    center bottom / 70% 6px no-repeat
+    linear-gradient(var(--blood), var(--blood));
+  -webkit-mask: none;
+}
+.sheet-wide .roll-toast {
+  bottom: 24px;
+}
+.sheet-pane .art-header {
+  margin: 0;
+  border-radius: var(--r1);
+}

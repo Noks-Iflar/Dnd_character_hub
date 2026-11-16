@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { roll } from '../../lib/dice/dice'
 import type { Sheet, SheetAttack, SheetResource } from '../../lib/snapshot/sheet'
+import { useWide } from '../../lib/use-wide'
 import { d20 } from './format'
 import { RollToast, type ShownRoll } from './RollToast'
 import type { NotesBinding } from './NotesEditor'
@@ -76,6 +77,7 @@ export function SheetView({ sheet, edit, notes }: { sheet: Sheet; edit?: SheetEd
   const [tab, setTab] = useState<TabId>('main')
   const [mode, setMode] = useState<RollMode>('normal')
   const [shown, setShown] = useState<ShownRoll | null>(null)
+  const wide = useWide()
 
   const props: TabProps = {
     sheet,
@@ -99,6 +101,39 @@ export function SheetView({ sheet, edit, notes }: { sheet: Sheet; edit?: SheetEd
   function open(id: TabId) {
     setTab(id)
     window.scrollTo({ top: 0 })
+  }
+
+  const other = (id: TabId) => (
+    <>
+      {id === 'combat' && <CombatTab {...props} mode={mode} onMode={setMode} />}
+      {id === 'magic' && <MagicTab {...props} />}
+      {id === 'gear' && <GearTab {...props} />}
+      {id === 'notes' && <NotesTab {...props} notes={notes} />}
+    </>
+  )
+
+  if (wide) {
+    // Desktop: "Лист" always on the left, the chosen tab on the right, tabs on top instead of the bottom menu
+    const right: TabId = tab === 'main' ? 'combat' : tab
+    return (
+      <div className="sheet-wide">
+        <section className="sheet-pane" aria-label="Лист">
+          <MainTab {...props} />
+        </section>
+        <section className="sheet-pane">
+          <nav className="sheet-tabs" aria-label="Разделы листа">
+            {TABS.filter((t) => t.id !== 'main').map((t) => (
+              <button key={t.id} type="button" aria-current={right === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
+                {t.icon}
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          {other(right)}
+        </section>
+        <RollToast roll={shown} onClose={() => setShown(null)} />
+      </div>
+    )
   }
 
   return (
