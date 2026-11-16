@@ -67,11 +67,7 @@ export function DiaryPage() {
 
   return (
     <>
-      <AppHeader>
-        <Link className="text-btn" to="/">
-          На главную
-        </Link>
-      </AppHeader>
+      <AppHeader />
       <div>
         <h1 style={{ fontSize: 32 }}>Дневник приключенцев</h1>
         <span className="brush-underline" aria-hidden="true" />

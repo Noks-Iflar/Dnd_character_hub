@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
 import {
@@ -163,11 +162,7 @@ export function LibraryPage() {
 
   return (
     <>
-      <AppHeader>
-        <Link className="text-btn" to="/">
-          На главную
-        </Link>
-      </AppHeader>
+      <AppHeader />
       <div>
         <h1 style={{ fontSize: 32 }}>Библиотека</h1>
         <span className="brush-underline" aria-hidden="true" />

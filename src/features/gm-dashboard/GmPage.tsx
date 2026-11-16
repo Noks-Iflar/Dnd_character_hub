@@ -1,5 +1,4 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router'
 import {
   deleteCharacter,
   listCharacters,
@@ -21,6 +20,7 @@ import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { CharacterCard } from '../../components/CharacterCard'
 import { EmptyState } from '../../components/EmptyState'
+import { BrandLink, NavButtons } from '../../components/NavMenu'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
@@ -150,9 +150,10 @@ export function GmPage() {
       <div className="art-header">
         <img src={`${import.meta.env.BASE_URL}ui/art/party.jpg`} alt="Партия идёт мимо горящих заводов" style={{ objectPosition: 'center 30%' }} />
         <div className="art-header-bar">
-          <Link className="brand" to="/">
-            Dnd Hub
-          </Link>
+          <span className="app-header-nav">
+            <NavButtons />
+            <BrandLink />
+          </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="chip chip-on-art">Мастер</span>
             <ThemeToggle />

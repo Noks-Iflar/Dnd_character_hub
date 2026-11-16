@@ -111,11 +111,7 @@ export function CharacterPage() {
 
   return (
     <>
-      <AppHeader>
-        <Link className="text-btn" to="/">
-          К персонажам
-        </Link>
-      </AppHeader>
+      <AppHeader />
       {state.status === 'loading' && <p className="muted">Загружаю лист…</p>}
       {state.status === 'empty' && (
         <EmptyState image="empty-scroll" alt="Свёрнутый свиток и перо в чернильнице" title="Снимка ещё нет">

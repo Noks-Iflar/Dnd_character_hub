@@ -1,5 +1,4 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { useAuth } from '../../lib/auth-context'
 import { updateOwnProfile, useProfile, type Profile } from '../../lib/profile'
@@ -91,11 +90,7 @@ export function AccountPage() {
   const profile = useProfile(userId)
   return (
     <>
-      <AppHeader>
-        <Link className="text-btn" to="/">
-          На главную
-        </Link>
-      </AppHeader>
+      <AppHeader />
       <div>
         <h1 style={{ fontSize: 32 }}>Аккаунт</h1>
         <span className="brush-underline" aria-hidden="true" />
