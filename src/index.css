@@ -157,6 +157,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* the corner splatter sticks out on the right; clip it instead of scrolling sideways */
+  overflow-x: clip;
 }
 /* Ink splatter in the top right corner of every screen */
 .page::before {
