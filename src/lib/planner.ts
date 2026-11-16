@@ -36,6 +36,25 @@ export function freeUsers(slots: number[], availability: Map<string, Set<number>
   return out
 }
 
+/** Users free for at least one half hour of the block (people in other time zones rarely cover a whole local block). */
+export function partlyFreeUsers(slots: number[], availability: Map<string, Set<number>>): string[] {
+  const out: string[] = []
+  for (const [user, set] of availability) if (slots.some((s) => set.has(s))) out.push(user)
+  return out
+}
+
+/** Merges free half-hour slots within [fromMs, toMs) into continuous [start, end) intervals. */
+export function freeIntervals(slots: Set<number>, fromMs: number, toMs: number): [number, number][] {
+  const sorted = [...slots].filter((s) => s >= fromMs && s < toMs).sort((x, y) => x - y)
+  const out: [number, number][] = []
+  for (const s of sorted) {
+    const last = out.at(-1)
+    if (last && last[1] === s) last[1] = s + SLOT_MS
+    else out.push([s, s + SLOT_MS])
+  }
+  return out
+}
+
 // ---- database ----
 
 function client() {

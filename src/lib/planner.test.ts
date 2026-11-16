@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, blockSlots, freeUsers, nextSession, weekMonday } from './planner'
+import { addDays, blockSlots, freeIntervals, freeUsers, nextSession, partlyFreeUsers, weekMonday } from './planner'
 
 describe('planner grid', () => {
   it('finds the Monday of the week in the viewer zone', () => {
@@ -36,3 +36,27 @@ describe('planner grid', () => {
     expect(nextSession(list, Date.parse('2026-12-06T00:00:00Z'))).toBe(null)
   })
 })
+
+describe('partial availability', () => {
+  const H = 3600 * 1000
+  const base = Date.UTC(2026, 10, 23, 17)
+  const anya = new Set([base, base + H / 2, base + H, base + 1.5 * H]) // 17:00–19:00 UTC
+  const availability = new Map([['anya', anya]])
+
+  it('counts people free for part of a block', () => {
+    // Tbilisi block 20:00–22:00 = 16:00–18:00 UTC: Anya is free only 17:00–18:00
+    const block = [base - H, base - H / 2, base, base + H / 2]
+    expect(freeUsers(block, availability)).toEqual([])
+    expect(partlyFreeUsers(block, availability)).toEqual(['anya'])
+  })
+
+  it('merges slots into intervals', () => {
+    const set = new Set([...anya, base + 3 * H])
+    expect(freeIntervals(set, base - 10 * H, base + 10 * H)).toEqual([
+      [base, base + 2 * H],
+      [base + 3 * H, base + 3.5 * H],
+    ])
+    expect(freeIntervals(set, base + H, base + 2 * H)).toEqual([[base + H, base + 2 * H]])
+  })
+})
+
