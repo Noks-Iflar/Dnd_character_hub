@@ -28,3 +28,6 @@ fixtures/
 .env
 .env.*
 !.env.example
+
+# Screenshots from local checks
+/*.png
