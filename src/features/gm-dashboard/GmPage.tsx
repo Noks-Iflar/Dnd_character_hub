@@ -271,7 +271,7 @@ export function GmPage() {
         </EmptyState>
       )}
 
-      <div className="attack-list">
+      <div className="attack-list card-grid">
         {characters.map((c, i) => (
           <div key={c.id} className="party-entry">
             <CharacterCard

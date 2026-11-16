@@ -5,6 +5,7 @@ import { listCharacters, type Character } from '../lib/db'
 import { clearOffline, loadOffline, onlineOr } from '../lib/offline'
 import { parentPath } from '../lib/nav'
 import { supabase } from '../lib/supabase'
+import { useWide } from '../lib/use-wide'
 
 const ICON = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, 'aria-hidden': true } as const
 
@@ -16,7 +17,8 @@ function MenuLink({ to, children, onGo }: { to: string; children: ReactNode; onG
   )
 }
 
-function Drawer({ onClose }: { onClose: () => void }) {
+/** Links to every screen; shared by the phone drawer and the desktop sidebar. */
+function NavList({ onGo }: { onGo: () => void }) {
   const auth = useAuth()
   const cached = loadOffline()
   const userId = auth.status === 'signed-in' ? auth.session.user.id : cached?.userId
@@ -36,25 +38,12 @@ function Drawer({ onClose }: { onClose: () => void }) {
     }
   }, [auth.status])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const own = isGm ? characters : characters.filter((c) => c.ownerId === userId)
 
+  const onClose = onGo
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <nav className="drawer" aria-label="Разделы приложения" onClick={(e) => e.stopPropagation()}>
-        <div className="drawer-head">
-          <span className="brand">Dnd Hub</span>
-          <button type="button" className="icon-btn" aria-label="Закрыть меню" onClick={onClose} autoFocus>
-            <svg {...ICON}>
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
+    <>
         <MenuLink to="/" onGo={onClose}>Главная</MenuLink>
         {isGm && <MenuLink to="/gm" onGo={onClose}>Экран мастера</MenuLink>}
         {own.length > 0 && (
@@ -88,8 +77,43 @@ function Drawer({ onClose }: { onClose: () => void }) {
             Выйти
           </button>
         )}
+    </>
+  )
+}
+
+function Drawer({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="drawer-backdrop" onClick={onClose}>
+      <nav className="drawer" aria-label="Разделы приложения" onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <span className="brand">Dnd Hub</span>
+          <button type="button" className="icon-btn" aria-label="Закрыть меню" onClick={onClose} autoFocus>
+            <svg {...ICON}>
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <NavList onGo={onClose} />
       </nav>
     </div>
+  )
+}
+
+/** Always-visible menu on the left of wide screens. */
+export function Sidebar() {
+  return (
+    <nav className="sidebar" aria-label="Разделы приложения">
+      <Link className="brand sidebar-brand" to="/">
+        Dnd Hub
+      </Link>
+      <NavList onGo={() => undefined} />
+    </nav>
   )
 }
 
@@ -99,6 +123,7 @@ export function NavButtons() {
   const location = useLocation()
   const navigate = useNavigate()
   const isHome = location.pathname === '/'
+  const wide = useWide()
 
   function back() {
     // react-router keeps its position in history.state.idx; 0 means we came from outside the app
@@ -109,11 +134,13 @@ export function NavButtons() {
 
   return (
     <span className="nav-buttons">
-      <button type="button" className="icon-btn" aria-label="Меню" aria-expanded={open} onClick={() => setOpen(true)}>
-        <svg {...ICON}>
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
+      {!wide && (
+        <button type="button" className="icon-btn" aria-label="Меню" aria-expanded={open} onClick={() => setOpen(true)}>
+          <svg {...ICON}>
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+      )}
       {!isHome && (
         <button type="button" className="icon-btn" aria-label="Назад" onClick={back}>
           <svg {...ICON}>
@@ -121,7 +148,7 @@ export function NavButtons() {
           </svg>
         </button>
       )}
-      {open && <Drawer onClose={() => setOpen(false)} />}
+      {open && !wide && <Drawer onClose={() => setOpen(false)} />}
     </span>
   )
 }

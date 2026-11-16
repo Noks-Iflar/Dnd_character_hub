@@ -1539,3 +1539,167 @@ details.add-entry > summary::-webkit-details-marker {
   margin: 4px 0 0;
   font-size: 15px;
 }
+
+/* ---- desktop: sidebar, wider pages, grids ---- */
+.sidebar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .shell.with-sidebar {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    align-items: start;
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 16px 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-right: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+  }
+  .sidebar-brand {
+    min-height: 44px;
+    padding: 0 10px 8px;
+  }
+  .page {
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 1120px;
+    padding: 16px 32px 40px;
+  }
+  .art-header {
+    margin: -16px -32px 0;
+    height: 240px;
+  }
+  .art-header-tall {
+    height: min(430px, 52vh);
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .page .home-links {
+    display: none;
+  }
+  .page > .btn {
+    align-self: flex-start;
+    min-width: 360px;
+  }
+  /* forms and reading text stay at a comfortable line length */
+  .form,
+  .narrow {
+    max-width: 640px;
+  }
+}
+
+.home-links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---- desktop sheet: "Лист" on the left, chosen tab on the right ---- */
+.sheet-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.sheet-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.sheet-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 4px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.sheet-tabs button {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.sheet-tabs button:hover {
+  color: var(--text);
+}
+.sheet-tabs button[aria-current='page'] {
+  color: var(--text);
+  font-weight: 700;
+  background:
+    center bottom / 70% 6px no-repeat
+    linear-gradient(var(--blood), var(--blood));
+  -webkit-mask: none;
+}
+.sheet-wide .roll-toast {
+  bottom: 24px;
+}
+.sheet-pane .art-header {
+  margin: 0;
+  border-radius: var(--r1);
+}
+
+/* ---- two columns on desktop; on the phone the wrappers vanish and blocks stack as before ---- */
+.two-col,
+.two-col-side,
+.two-col-main,
+.who-block {
+  display: contents;
+}
+/* phone: "who is free" goes after the grid */
+.who-block > * {
+  order: 2;
+}
+@media (min-width: 1024px) {
+  .two-col {
+    display: grid;
+    gap: 32px;
+    align-items: start;
+  }
+  .two-col-side,
+  .two-col-main,
+  .who-block {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .library-layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+  .library-layout .two-col-side {
+    position: sticky;
+    top: 16px;
+  }
+  .library-layout .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .planner-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+  .planner-cell {
+    height: 52px;
+  }
+}

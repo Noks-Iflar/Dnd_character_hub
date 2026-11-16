@@ -169,6 +169,8 @@ export function LibraryPage() {
         {rows && <span className="muted small">{rows.length.toLocaleString('ru-RU')} записей из AG Fifthpendium и Laaru</span>}
       </div>
 
+      <div className="two-col library-layout">
+      <aside className="two-col-side">
       {isGm && (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label className="btn">
@@ -271,6 +273,12 @@ export function LibraryPage() {
           </div>
 
           <span className="muted small">Найдено: {result.length}</span>
+        </>
+      )}
+      </aside>
+      <div className="two-col-main">
+      {rows && rows.length > 0 && (
+        <>
           {result.length > 0 && (
             <div className="card list">
               {result.slice(0, shown).map((r) => (
@@ -285,6 +293,8 @@ export function LibraryPage() {
           )}
         </>
       )}
+      </div>
+      </div>
     </>
   )
 }
