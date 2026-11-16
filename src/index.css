@@ -1660,3 +1660,46 @@ details.add-entry > summary::-webkit-details-marker {
   margin: 0;
   border-radius: var(--r1);
 }
+
+/* ---- two columns on desktop; on the phone the wrappers vanish and blocks stack as before ---- */
+.two-col,
+.two-col-side,
+.two-col-main,
+.who-block {
+  display: contents;
+}
+/* phone: "who is free" goes after the grid */
+.who-block > * {
+  order: 2;
+}
+@media (min-width: 1024px) {
+  .two-col {
+    display: grid;
+    gap: 32px;
+    align-items: start;
+  }
+  .two-col-side,
+  .two-col-main,
+  .who-block {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .library-layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+  .library-layout .two-col-side {
+    position: sticky;
+    top: 16px;
+  }
+  .library-layout .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .planner-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+  .planner-cell {
+    height: 52px;
+  }
+}

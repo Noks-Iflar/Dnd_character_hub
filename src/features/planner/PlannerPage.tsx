@@ -206,6 +206,8 @@ export function PlannerPage() {
       </div>
 
       {error && <p className="error">{error}</p>}
+      <div className="two-col planner-layout">
+      <div className="two-col-side">
       <NextSessionCard session={nextSession(sessions, now)} profiles={profiles} zone={zone} />
 
       {isGm && <ScheduleForm zone={zone} onDone={() => setVersion((v) => v + 1)} />}
@@ -229,6 +231,46 @@ export function PlannerPage() {
         </div>
       )}
 
+      <div className="who-block">
+      <h2 className="section-title">Кто когда свободен</h2>
+      <div className="card list">
+        {profiles.map((p) => {
+          const spans = freeIntervals(availability.get(p.id) ?? new Set(), weekStart, weekEnd)
+          // group by local day of the start
+          const byDay = new Map<string, string[]>()
+          for (const sp of spans) {
+            const day = formatInZone(sp[0], zone, { weekday: 'short', day: 'numeric' })
+            byDay.set(day, [...(byDay.get(day) ?? []), span(sp)])
+          }
+          return (
+            <div key={p.id} className="free-person">
+              <strong>{p.display_name || 'без имени'}</strong>
+              <span className="muted small"> · {offsetLabel(now, p.timezone)}</span>
+              {byDay.size ? (
+                <ul className="plain-list free-days">
+                  {[...byDay].map(([day, list]) => (
+                    <li key={day}>
+                      <span className="muted">{day}:</span> {list.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="muted small">на этой неделе ничего не отметил</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="muted small" style={{ margin: 0 }}>
+        Время везде твоё ({offsetLabel(now, zone)}). Сетка показывает 08:00–24:00; отметки в другие часы видны в этом списке.
+      </p>
+
+      <div className="card hint">
+        <span className="muted small">Мастер назначит дату, когда отметятся все. Каждый увидит её в своём времени.</span>
+      </div>
+      </div>
+      </div>
+      <div className="two-col-main planner-main">
       <h2 className="section-title">Когда ты свободен</h2>
       <div className="week-nav">
         <button type="button" className="icon-btn" aria-label="Предыдущая неделя" disabled={weekOffset <= 0} onClick={() => setWeekOffset((w) => w - 1)}>
@@ -318,41 +360,7 @@ export function PlannerPage() {
         </div>
       )}
 
-      <h2 className="section-title">Кто когда свободен</h2>
-      <div className="card list">
-        {profiles.map((p) => {
-          const spans = freeIntervals(availability.get(p.id) ?? new Set(), weekStart, weekEnd)
-          // group by local day of the start
-          const byDay = new Map<string, string[]>()
-          for (const sp of spans) {
-            const day = formatInZone(sp[0], zone, { weekday: 'short', day: 'numeric' })
-            byDay.set(day, [...(byDay.get(day) ?? []), span(sp)])
-          }
-          return (
-            <div key={p.id} className="free-person">
-              <strong>{p.display_name || 'без имени'}</strong>
-              <span className="muted small"> · {offsetLabel(now, p.timezone)}</span>
-              {byDay.size ? (
-                <ul className="plain-list free-days">
-                  {[...byDay].map(([day, list]) => (
-                    <li key={day}>
-                      <span className="muted">{day}:</span> {list.join(', ')}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="muted small">на этой неделе ничего не отметил</div>
-              )}
-            </div>
-          )
-        })}
       </div>
-      <p className="muted small" style={{ margin: 0 }}>
-        Время везде твоё ({offsetLabel(now, zone)}). Сетка показывает 08:00–24:00; отметки в другие часы видны в этом списке.
-      </p>
-
-      <div className="card hint">
-        <span className="muted small">Мастер назначит дату, когда отметятся все. Каждый увидит её в своём времени.</span>
       </div>
     </>
   )
