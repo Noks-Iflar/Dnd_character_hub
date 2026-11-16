@@ -17,7 +17,15 @@ describe('cleanEnrichers', () => {
 
   it('keeps references readable', () => {
     expect(cleanEnrichers('&Reference[prone]{Сбит с ног}')).toBe('Сбит с ног')
-    expect(cleanEnrichers('&Reference[prone]')).toBe('prone')
+    expect(cleanEnrichers('&Reference[prone]')).toBe('Сбитый с ног')
+    expect(cleanEnrichers('&Reference[someNewRule]')).toBe('someNewRule')
+  })
+
+  it('handles references as they come in HTML (&amp;), with options and any case', () => {
+    expect(cleanEnrichers('цель &amp;Reference[charmed apply=false]{Обворожена}, пока')).toBe('цель Обворожена, пока')
+    expect(cleanEnrichers('&amp;Reference[friendly]{Дружественно} к вам')).toBe('Дружественно к вам')
+    expect(cleanEnrichers('действие &amp;reference[Magic]')).toBe('действие Магия')
+    expect(cleanEnrichers('&amp;Reference[Charmed apply=false]')).toBe('Обворожённый')
   })
 
   it('turns roll commands into formulas', () => {
@@ -37,7 +45,13 @@ describe('cleanEnrichers', () => {
   })
 
   it('keeps arguments of other commands', () => {
-    expect(cleanEnrichers('[[/damage 2d6 fire]]')).toBe('2d6 fire')
+    expect(cleanEnrichers('[[/check prc 11]]')).toBe('prc 11')
+  })
+
+  it('translates damage types', () => {
+    expect(cleanEnrichers('[[/damage 2d6 fire]]')).toBe('2d6 огнём')
+    expect(cleanEnrichers('[[/damage 4d6 average poison]]')).toBe('4d6 ядом')
+    expect(cleanEnrichers('[[/damage 1d8 type=cold]]')).toBe('1d8 холодом')
   })
 
   it('handles several enrichers in one string', () => {
