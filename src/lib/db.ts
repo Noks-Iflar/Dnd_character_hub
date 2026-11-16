@@ -322,3 +322,11 @@ export async function addItemChange(input: { characterId: string; itemUuid: stri
   })
   if (error) throw new Error(describeWriteError(error.message))
 }
+
+/** GM: deletes a character with all its snapshots, edits and notes (database cascades). */
+export async function deleteCharacter(id: string): Promise<void> {
+  // Ask for the deleted row back: RLS silently deletes nothing for non-GMs
+  const { data, error } = await client().from('characters').delete().eq('id', id).select('id')
+  if (error) throw new Error(error.message)
+  if (!data?.length) throw new Error('Персонаж не удалён: удалять может только мастер.')
+}

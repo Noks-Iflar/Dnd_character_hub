@@ -463,3 +463,28 @@ describe('adding library items through the journal', () => {
     await runAs(adb, GM, `update public.characters set status = 'between_sessions'`)
   })
 })
+
+describe('deleting a character', () => {
+  it('the GM deletes a character with its snapshots, edits and notes; players cannot', async () => {
+    const xdb = await createDb()
+    await xdb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const c = await runAs(xdb, GM, `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Вася', 'a1') returning id`)
+    if (!c.ok) throw new Error(c.error)
+    const id = String(c.rows[0]?.id)
+    const s = await runAs(xdb, GM, `insert into public.snapshots (character_id, data) values ('${id}', '{}') returning id`)
+    if (!s.ok) throw new Error(s.error)
+    await runAs(xdb, P1, `insert into public.changes (character_id, snapshot_id, path, new_value) values ('${id}', '${String(s.rows[0]?.id)}', 'system.currency.gp', '1')`)
+    await runAs(xdb, P1, `insert into public.character_notes (character_id, body, updated_by) values ('${id}', 'заметка', '${P1}')`)
+
+    expect(await runAs(xdb, P1, `delete from public.characters where id = '${id}' returning id`)).toEqual({ ok: true, rows: [] })
+    const del = await runAs(xdb, GM, `delete from public.characters where id = '${id}' returning id`)
+    expect(del.ok && del.rows.length).toBe(1)
+    for (const table of ['snapshots', 'changes', 'character_notes']) {
+      const left = await xdb.query(`select count(*)::int as n from public.${table}`)
+      expect(left.rows, table).toEqual([{ n: 0 }])
+    }
+  })
+})
