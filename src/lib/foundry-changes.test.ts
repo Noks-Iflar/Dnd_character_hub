@@ -35,7 +35,7 @@ describe('buildChangesFile', () => {
           changeIds: ['x1', 'x2', 'x3', 'x4'],
           changes: [
             { kind: 'set', path: 'system.attributes.hp.value', value: 22, was: 35 },
-            { kind: 'add_item', uuid: 'Compendium.x.Item.p', name: 'Зелье', quantity: 2 },
+            { kind: 'add_item', uuid: 'Compendium.x.Item.p', name: 'Зелье', quantity: 2, type: null },
           ],
         },
       ],

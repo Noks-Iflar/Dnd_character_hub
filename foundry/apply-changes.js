@@ -14,6 +14,8 @@
   ];
   const ITEM_PATH = /^items\.([A-Za-z0-9]{16})\.(system\..+)$/;
   const BOOLEAN = /(equipped|inspiration)$/;
+  const COUNTABLE = new Set(['weapon', 'equipment', 'consumable', 'tool', 'loot', 'container']);
+  const ADD_LABEL = { spell: 'Добавить заклинание', feat: 'Добавить черту' };
   const LABEL = {
     'system.attributes.hp.value': 'Хиты',
     'system.attributes.hp.temp': 'Временные хиты',
@@ -74,7 +76,7 @@
       for (const c of ch.changes ?? []) {
         if (c.kind === 'add_item') {
           const quantity = Math.trunc(Number(c.quantity));
-          rows.push(quantity >= 1 ? { kind: 'add', uuid: c.uuid, name: c.name, quantity } : { error: `${c.name}: неверное количество` });
+          rows.push(quantity >= 1 ? { kind: 'add', uuid: c.uuid, name: c.name, quantity, type: c.type ?? null } : { error: `${c.name}: неверное количество` });
           continue;
         }
         if (!actor) continue;
@@ -103,7 +105,7 @@
             r.error
               ? `<tr><td colspan="4" style="color:#b3261e">Пропуск: ${esc(r.error)}</td></tr>`
               : r.kind === 'add'
-                ? `<tr><td>Добавить предмет</td><td colspan="3"><b>${esc(r.name)}</b> ×${r.quantity}</td></tr>`
+                ? `<tr><td>${esc(ADD_LABEL[r.type] ?? 'Добавить предмет')}</td><td colspan="3"><b>${esc(r.name)}</b>${COUNTABLE.has(r.type ?? 'loot') ? ` ×${r.quantity}` : ''}</td></tr>`
                 : `<tr${r.conflict ? ' style="background:rgba(179,38,30,0.15)"' : ''}><td>${esc(r.label)}</td><td>${esc(show(r.was))}</td><td>${esc(show(r.current))}</td><td><b>${esc(show(r.value))}</b></td></tr>`,
           )
           .join('');
@@ -149,15 +151,23 @@
       for (const r of p.rows.filter((x) => x.kind === 'add')) {
         try {
           // Same item from the same compendium already carried: just increase the quantity
-          const existing = p.actor.items.find((i) => i._stats?.compendiumSource === r.uuid || i.flags?.core?.sourceId === r.uuid);
-          if (existing) {
+          const fromSource = (i) => i._stats?.compendiumSource === r.uuid || i.flags?.core?.sourceId === r.uuid;
+          const source = p.actor.items.find(fromSource) ? null : await fromUuid(r.uuid);
+          // Spells and feats come one copy each; only physical items have a quantity.
+          // The same spell may come from another compendium: compare the dnd5e identifier too.
+          const sameRule = (i) => !!source?.system?.identifier && i.type === source.type && i.system?.identifier === source.system.identifier;
+          const existing = p.actor.items.find((i) => fromSource(i) || (!COUNTABLE.has(i.type) && sameRule(i)));
+          const countable = COUNTABLE.has(existing?.type ?? source?.type ?? r.type ?? 'loot');
+          if (existing && !countable) {
+            problems.push(`${p.name}: ${r.name} — уже есть у персонажа, пропускаю`);
+            continue;
+          } else if (existing) {
             await existing.update({ 'system.quantity': (existing.system.quantity ?? 1) + r.quantity });
           } else {
-            const source = await fromUuid(r.uuid);
             if (!source) throw new Error('нет в компендиуме');
             const itemData = source.toObject();
             delete itemData._id;
-            foundry.utils.setProperty(itemData, 'system.quantity', r.quantity);
+            if (countable) foundry.utils.setProperty(itemData, 'system.quantity', r.quantity);
             foundry.utils.setProperty(itemData, '_stats.compendiumSource', r.uuid);
             await p.actor.createEmbeddedDocuments('Item', [itemData]);
           }

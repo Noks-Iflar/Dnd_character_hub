@@ -19,14 +19,21 @@ export function NotesTab({ sheet, notes }: TabProps & { notes?: NotesBinding }) 
         <p className="muted">Умений нет.</p>
       ) : (
         <div className="card list">
-          {sheet.features.map((f) => (
-            <details key={f.id} className="list-details">
-              <summary>
+          {sheet.features.map((f) =>
+            f.pending ? (
+              <div key={f.id} className="list-row static">
                 <span className="grow">{f.name}</span>
-              </summary>
-              <Description html={f.description} />
-            </details>
-          ))}
+                <span className="chip chip-blood">ждёт мастера</span>
+              </div>
+            ) : (
+              <details key={f.id} className="list-details">
+                <summary>
+                  <span className="grow">{f.name}</span>
+                </summary>
+                <Description html={f.description} />
+              </details>
+            ),
+          )}
         </div>
       )}
     </>

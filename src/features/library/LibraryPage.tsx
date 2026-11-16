@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { toSafeHtml } from '../../lib/enrichers/enrichers'
 import {
   CATEGORY_LABEL,
-  ITEM_TYPES,
+  ADDABLE_TYPES,
   libraryDescription,
   listLibrary,
   parseLibraryExport,
@@ -47,7 +46,7 @@ function Entry({ row, characters }: { row: LibraryRow; characters: Character[] }
           </span>
         </span>
       </summary>
-      {ITEM_TYPES.has(row.type) && <AddToInventory row={row} characters={characters} />}
+      {ADDABLE_TYPES.has(row.type) && <AddToInventory row={row} characters={characters} />}
       {error && <p className="error description">{error}</p>}
       {html === null && !error && <p className="muted description">Загружаю описание…</p>}
       {html !== null && (html ? <div className="description" dangerouslySetInnerHTML={{ __html: html }} /> : <p className="muted description">Описания нет.</p>)}
@@ -163,11 +162,7 @@ export function LibraryPage() {
 
   return (
     <>
-      <AppHeader>
-        <Link className="text-btn" to="/">
-          На главную
-        </Link>
-      </AppHeader>
+      <AppHeader />
       <div>
         <h1 style={{ fontSize: 32 }}>Библиотека</h1>
         <span className="brush-underline" aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { BrandLink, NavButtons } from '../../components/NavMenu'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { useAuth } from '../../lib/auth-context'
 import { listProfiles } from '../../lib/db'
@@ -181,9 +182,10 @@ export function PlannerPage() {
       <div className="art-header">
         <img src={`${import.meta.env.BASE_URL}ui/art/planner.jpg`} alt="Путники у костра, рядом песочные часы" style={{ objectPosition: 'center 40%' }} />
         <div className="art-header-bar">
-          <Link className="text-btn" to="/" style={{ color: '#e8e4dc', marginLeft: -8 }}>
-            ← На главную
-          </Link>
+          <span className="app-header-nav">
+            <NavButtons />
+            <BrandLink />
+          </span>
           <ThemeToggle />
         </div>
       </div>
