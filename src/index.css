@@ -1403,7 +1403,7 @@ details.add-entry > summary::-webkit-details-marker {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 7px 4px 6px 3px / 4px 6px 3px 7px;
-  background: color-mix(in srgb, var(--tech) calc(var(--level, 0) * 32%), var(--surface));
+  background: color-mix(in srgb, var(--tech) calc(var(--level, 0) * 55%), var(--surface));
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
@@ -1523,4 +1523,19 @@ details.add-entry > summary::-webkit-details-marker {
 .drawer-link.active {
   background: var(--surface-sunken);
   font-weight: 700;
+}
+.planner-cell.picked {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+.free-person {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.free-person:last-child {
+  border-bottom: 0;
+}
+.free-days {
+  margin: 4px 0 0;
+  font-size: 15px;
 }

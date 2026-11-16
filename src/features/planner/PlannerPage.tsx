@@ -11,10 +11,12 @@ import {
   blockSlots,
   DAY_SHORT,
   deletePlannedSession,
+  freeIntervals,
   freeUsers,
   listPlannedSessions,
   loadAvailability,
   nextSession,
+  partlyFreeUsers,
   setMyAvailability,
   weekMonday,
   type PlannedSession,
@@ -125,6 +127,10 @@ export function PlannerPage() {
   const [availability, setAvailability] = useState<Map<string, Set<number>>>(new Map())
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
+  // GM mostly looks at others; players mostly mark themselves
+  const [modeChoice, setMode] = useState<'mark' | 'view' | null>(null)
+  const mode = modeChoice ?? (isGm ? 'view' : 'mark')
+  const [picked, setPicked] = useState<{ day: number; hour: number } | null>(null)
 
   const monday = useMemo(() => addDays(weekMonday(now, zone), weekOffset * 7), [now, zone, weekOffset])
   const grid = useMemo(
@@ -139,11 +145,13 @@ export function PlannerPage() {
     [monday, zone],
   )
 
+  // Whole local week, midnight to midnight: night-time marks of people in other zones count too
+  const weekStart = useMemo(() => fromWall({ ...monday, hour: 0, minute: 0 }, zone), [monday, zone])
+  const weekEnd = useMemo(() => fromWall({ ...addDays(monday, 7), hour: 0, minute: 0 }, zone), [monday, zone])
+
   useEffect(() => {
-    const first = grid[0]?.cells[0]?.slots[0] ?? 0
-    const last = (grid.at(-1)?.cells.at(-1)?.slots.at(-1) ?? 0) + 30 * 60 * 1000
     let cancelled = false
-    Promise.all([listProfiles(), listPlannedSessions(), loadAvailability(first, last)])
+    Promise.all([listProfiles(), listPlannedSessions(), loadAvailability(weekStart, weekEnd)])
       .then(([p, s, a]) => {
         if (cancelled) return
         setProfiles(p)
@@ -155,9 +163,12 @@ export function PlannerPage() {
     return () => {
       cancelled = true
     }
-  }, [grid, version])
+  }, [weekStart, weekEnd, version])
 
   const total = profiles.length
+  const hm = (ms: number) => formatInZone(ms, zone, { hour: '2-digit', minute: '2-digit' })
+  const span = ([a, b]: [number, number]) => `${hm(a)}–${hm(b)}`
+  const pickedCell = picked ? grid.find((r) => r.hour === picked.hour)?.cells[picked.day] : undefined
   const mine = availability.get(userId) ?? new Set<number>()
   const upcoming = sessions.filter((s) => s.startsAt + 4 * 3600 * 1000 > now)
 
@@ -230,8 +241,18 @@ export function PlannerPage() {
           ›
         </button>
       </div>
+      <div className="segmented" role="group" aria-label="Режим сетки" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+        <button type="button" className="toggle" aria-pressed={mode === 'mark'} onClick={() => (setMode('mark'), setPicked(null))}>
+          Отмечаю себя
+        </button>
+        <button type="button" className="toggle" aria-pressed={mode === 'view'} onClick={() => setMode('view')}>
+          Смотрю всех
+        </button>
+      </div>
       <p className="muted small" style={{ margin: 0 }}>
-        Нажми на клетку, если свободен эти два часа. Цифра — сколько человек свободно.
+        {mode === 'mark'
+          ? 'Нажми на клетку, если свободен эти два часа. Цифра — сколько человек свободно хотя бы часть времени.'
+          : 'Нажми на клетку, чтобы увидеть, кто и во сколько свободен. Цифра — сколько человек свободно хотя бы часть времени.'}
       </p>
 
       <div className="planner-grid" role="grid" aria-label="Свободное время на неделе">
@@ -247,24 +268,26 @@ export function PlannerPage() {
             {String(row.hour).padStart(2, '0')}–{String((row.hour + 2) % 24).padStart(2, '0')}
           </span>,
           ...row.cells.map((cell, i) => {
-            const free = freeUsers(cell.slots, availability)
+            const full = freeUsers(cell.slots, availability)
+            const some = partlyFreeUsers(cell.slots, availability)
             const isMine = cell.slots.every((s) => mine.has(s))
             const past = (cell.slots.at(-1) ?? 0) < now
-            const level = total ? free.length / total : 0
-            const names = free.map((id) => profiles.find((p) => p.id === id)?.display_name ?? '?').join(', ')
+            const level = total ? (full.length + some.length) / 2 / total : 0
+            const names = some.map((id) => profiles.find((p) => p.id === id)?.display_name ?? '?').join(', ')
+            const isPicked = picked?.day === i && picked.hour === row.hour
             return (
               <button
                 key={`${row.hour}-${i}`}
                 type="button"
-                className={`planner-cell${isMine ? ' mine' : ''}${free.length > 0 && free.length === total ? ' all' : ''}`}
+                className={`planner-cell${isMine ? ' mine' : ''}${full.length > 0 && full.length === total ? ' all' : ''}${isPicked ? ' picked' : ''}`}
                 style={{ ['--level' as string]: String(level) }}
-                aria-pressed={isMine}
-                aria-label={`${DAY_SHORT[i]} ${addDays(monday, i).day}, ${row.hour}:00–${row.hour + 2}:00: свободно ${free.length} из ${total}${names ? ` (${names})` : ''}`}
+                aria-pressed={mode === 'mark' ? isMine : isPicked}
+                aria-label={`${DAY_SHORT[i]} ${addDays(monday, i).day}, ${row.hour}:00–${row.hour + 2}:00: свободно ${some.length} из ${total}${names ? ` (${names})` : ''}`}
                 title={names || undefined}
-                disabled={past}
-                onClick={() => void toggle(cell.slots, !isMine)}
+                disabled={mode === 'mark' && past}
+                onClick={() => (mode === 'mark' ? void toggle(cell.slots, !isMine) : setPicked(isPicked ? null : { day: i, hour: row.hour }))}
               >
-                {free.length || ''}
+                {some.length || ''}
               </button>
             )
           }),
@@ -278,6 +301,56 @@ export function PlannerPage() {
           <span className="legend-box all" /> свободны все {total}
         </span>
       </div>
+      {mode === 'view' && pickedCell && (
+        <div className="card list" aria-live="polite">
+          <div className="spell-level">
+            {DAY_SHORT[picked?.day ?? 0]} {pickedCell.date.day}, {String(picked?.hour).padStart(2, '0')}:00–{String(((picked?.hour ?? 0) + 2) % 24).padStart(2, '0')}:00
+          </div>
+          {profiles.map((p) => {
+            const spans = freeIntervals(availability.get(p.id) ?? new Set(), pickedCell.slots[0] ?? 0, (pickedCell.slots.at(-1) ?? 0) + 30 * 60 * 1000)
+            return (
+              <div key={p.id} className="list-row static">
+                <span className="grow">{p.display_name || 'без имени'}</span>
+                <span className={spans.length ? '' : 'muted small'}>{spans.length ? spans.map(span).join(', ') : 'не отмечено'}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <h2 className="section-title">Кто когда свободен</h2>
+      <div className="card list">
+        {profiles.map((p) => {
+          const spans = freeIntervals(availability.get(p.id) ?? new Set(), weekStart, weekEnd)
+          // group by local day of the start
+          const byDay = new Map<string, string[]>()
+          for (const sp of spans) {
+            const day = formatInZone(sp[0], zone, { weekday: 'short', day: 'numeric' })
+            byDay.set(day, [...(byDay.get(day) ?? []), span(sp)])
+          }
+          return (
+            <div key={p.id} className="free-person">
+              <strong>{p.display_name || 'без имени'}</strong>
+              <span className="muted small"> · {offsetLabel(now, p.timezone)}</span>
+              {byDay.size ? (
+                <ul className="plain-list free-days">
+                  {[...byDay].map(([day, list]) => (
+                    <li key={day}>
+                      <span className="muted">{day}:</span> {list.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="muted small">на этой неделе ничего не отметил</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="muted small" style={{ margin: 0 }}>
+        Время везде твоё ({offsetLabel(now, zone)}). Сетка показывает 08:00–24:00; отметки в другие часы видны в этом списке.
+      </p>
+
       <div className="card hint">
         <span className="muted small">Мастер назначит дату, когда отметятся все. Каждый увидит её в своём времени.</span>
       </div>
