@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router'
 import {
+  deleteCharacter,
   listCharacters,
   listPendingChanges,
   listProfiles,
@@ -104,6 +105,15 @@ export function GmPage() {
     } catch (e) {
       setLoadError(errorText(e))
     }
+  }
+
+  function removeCharacter(c: Character) {
+    const ok = window.confirm(
+      `Удалить персонажа «${c.name}» из приложения?\n\n` +
+        'Вместе с ним навсегда удалятся все его снимки (история версий), правки игрока и личные заметки. ' +
+        'В Foundry ничего не изменится. Если потом загрузить его снимок снова, персонаж появится заново, но без истории.',
+    )
+    if (ok) void run(() => deleteCharacter(c.id))
   }
 
   const setStatus = (ids: string[], status: CharacterStatus) => run(() => setCharacterStatus(ids, status))
@@ -302,6 +312,9 @@ export function GmPage() {
                   onClick={() => setStatus([c.id], c.status === 'in_game' ? 'between_sessions' : 'in_game')}
                 >
                   {c.status === 'in_game' ? 'Открыть правки только ему' : 'Закрыть правки только ему'}
+                </button>
+                <button type="button" className="btn danger-btn" onClick={() => removeCharacter(c)}>
+                  Удалить персонажа
                 </button>
               </div>
             </details>
