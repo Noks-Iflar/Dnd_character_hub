@@ -21,6 +21,7 @@ import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { CharacterCard } from '../../components/CharacterCard'
 import { EmptyState } from '../../components/EmptyState'
 import { ThemeToggle } from '../../components/ThemeToggle'
+import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
 import { PendingChanges } from './PendingChanges'
 
@@ -31,6 +32,8 @@ export function GmPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [summaries, setSummaries] = useState<Record<string, CharacterSummary>>({})
+  // Journal rows in the last downloaded changes file
+  const [downloaded, setDownloaded] = useState<string[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pending, setPending] = useState<Snapshot[]>([])
   const [fileError, setFileError] = useState<string | null>(null)
@@ -114,6 +117,20 @@ export function GmPage() {
   const anyBetween = characters.some((c) => c.status === 'between_sessions')
 
   const players = profiles.filter((p) => p.role === 'player')
+
+  function downloadChanges() {
+    const file = buildChangesFile(characters, pendingChanges)
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dndhub-changes-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setDownloaded(file.characters.flatMap((c) => c.changeIds))
+  }
 
   const lastSnapshot = characters.map((c) => c.lastSnapshotAt).filter((d): d is string => !!d).sort().at(-1) ?? null
   const ownerName = (ownerId: string | null) => profiles.find((p) => p.id === ownerId)?.display_name ?? null
@@ -207,6 +224,23 @@ export function GmPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+
+      {pendingChanges.length > 0 && (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span className="label-caps">Перенос в Foundry</span>
+          <span className="muted small">
+            Правок ждут: {pendingChanges.length}. Скачай файл и примени его в Foundry макросом «Применить правки».
+          </span>
+          <button type="button" className="btn" onClick={downloadChanges}>
+            Скачать правки для Foundry
+          </button>
+          {downloaded.length > 0 && (
+            <button type="button" className="btn btn-primary" onClick={() => markApplied(downloaded).then(() => setDownloaded([]))}>
+              Всё перенесено — отметить применёнными ({downloaded.length})
+            </button>
           )}
         </div>
       )}
