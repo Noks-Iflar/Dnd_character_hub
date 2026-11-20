@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../lib/auth-context'
 import { listCharacters, type Character } from '../lib/db'
@@ -148,7 +149,8 @@ export function NavButtons({ menu = true }: { menu?: boolean }) {
           </svg>
         </button>
       )}
-      {open && !wide && <Drawer onClose={() => setOpen(false)} />}
+      {/* rendered at the end of <body>: inside a header with art it would sit under the page title's layer */}
+      {open && !wide && createPortal(<Drawer onClose={() => setOpen(false)} />, document.body)}
     </span>
   )
 }
