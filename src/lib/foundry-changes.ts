@@ -1,5 +1,6 @@
 // File with pending edits for the "Применить правки" Foundry macro (phase 5).
 import type { Character, PendingChange } from './db'
+import { reviewLines } from './review'
 import { isEditablePath, type ChangeValue } from './snapshot/changes'
 
 export type FileSetChange = { kind: 'set'; path: string; value: ChangeValue; was: ChangeValue | null }
@@ -19,27 +20,31 @@ export type ChangesFile = {
 }
 
 /**
- * Groups pending edits by character. For "set" edits only the final value per field
- * goes into the file (with the value before the first edit, for the preview);
- * every "add_item" edit stays a separate line.
+ * Accepted edits by character. For "set" edits only the final value per field goes into the file
+ * (with the value before the first edit, for the preview); every "add_item" edit is its own line.
+ * Undecided and rejected lines stay out of the file.
  */
 export function buildChangesFile(characters: Character[], pending: PendingChange[], now = new Date()): ChangesFile {
   const out: ChangesFile['characters'] = []
   for (const character of characters) {
-    const own = pending.filter((c) => c.characterId === character.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    if (!own.length) continue
-    const sets = new Map<string, FileSetChange>()
-    const adds: FileAddItem[] = []
-    for (const c of own) {
-      if (c.kind === 'add_item') {
-        if (c.itemUuid && c.itemName && typeof c.newValue === 'number') adds.push({ kind: 'add_item', uuid: c.itemUuid, name: c.itemName, quantity: c.newValue, type: c.itemType ?? null })
-        continue
+    const accepted = reviewLines(pending.filter((c) => c.characterId === character.id)).filter((l) => l.decision === 'accepted')
+    const changes: (FileSetChange | FileAddItem)[] = []
+    const ids: string[] = []
+    for (const line of accepted) {
+      const c = line.last
+      if (line.kind === 'add_item') {
+        if (!c.itemUuid || !c.itemName || typeof c.newValue !== 'number') continue
+        changes.push({ kind: 'add_item', uuid: c.itemUuid, name: c.itemName, quantity: c.newValue, type: c.itemType ?? null })
+      } else {
+        if (!isEditablePath(line.path)) continue
+        changes.push({ kind: 'set', path: line.path, value: line.newValue, was: line.oldValue })
       }
-      if (!isEditablePath(c.path)) continue
-      const first = sets.get(c.path)
-      sets.set(c.path, { kind: 'set', path: c.path, value: c.newValue, was: first ? first.was : c.oldValue })
+      ids.push(...line.rows.map((r) => r.id))
     }
-    out.push({ actorId: character.foundryActorId, name: character.name, changeIds: own.map((c) => c.id), changes: [...sets.values(), ...adds] })
+    if (!changes.length) continue
+    // fields first, then added items, as the macro preview expects
+    changes.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'set' ? -1 : 1))
+    out.push({ actorId: character.foundryActorId, name: character.name, changeIds: ids, changes })
   }
   return { kind: 'dndhub-changes', version: 1, createdAt: now.toISOString(), characters: out }
 }

@@ -7,6 +7,7 @@ import {
   markChangesApplied,
   setCharacterOwner,
   setCharacterStatus,
+  setReview,
   snapshotSizeKb,
   uploadSnapshots,
   type Character,
@@ -24,7 +25,9 @@ import { BrandLink, NavButtons } from '../../components/NavMenu'
 import { SettingsLink } from '../../components/SettingsLink'
 import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
-import { PendingChanges } from './PendingChanges'
+import { ReviewChanges } from './ReviewChanges'
+import { countDecisions, reviewLines, rowIds } from '../../lib/review'
+import type { Review } from '../../lib/snapshot/changes'
 import { BrushButton, FileButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -119,10 +122,30 @@ export function GmPage() {
 
   const setStatus = (ids: string[], status: CharacterStatus) => run(() => setCharacterStatus(ids, status))
   const markApplied = (ids: string[]) => run(() => markChangesApplied(ids))
-  const pendingOf = (characterId: string) => pendingChanges.filter((c) => c.characterId === characterId)
+
+  // Review lines: one per field or added item; the GM decides each of them
+  const lines = reviewLines(pendingChanges, (c) => c.characterId)
+  const counts = countDecisions(lines)
+  const rejectedIds = rowIds(lines.filter((l) => l.decision === 'rejected'))
+  /** Lines still on their way to Foundry (undecided or accepted) */
+  const waitingOf = (characterId: string) => lines.filter((l) => l.decision !== 'rejected' && l.rows[0]?.characterId === characterId).length
   const pendingByActor = (actorId: string | null) => {
     const character = characters.find((c) => c.foundryActorId === actorId)
-    return character ? pendingOf(character.id).length : 0
+    return character ? waitingOf(character.id) : 0
+  }
+
+  // Optimistic: the toggle switches at once, rolls back if the server says no
+  function decide(ids: string[], review: Review) {
+    if (!ids.length) return
+    const before = pendingChanges
+    const set = new Set(ids)
+    setPendingChanges((list) => list.map((c) => (set.has(c.id) ? { ...c, review } : c)))
+    // a downloaded file no longer matches the decisions
+    setDownloaded([])
+    setReview(ids, review).catch((e: unknown) => {
+      setPendingChanges(before)
+      setLoadError(errorText(e))
+    })
   }
   const allIds = characters.map((c) => c.id)
   const anyBetween = characters.some((c) => c.status === 'between_sessions')
@@ -146,9 +169,20 @@ export function GmPage() {
   const lastSnapshot = characters.map((c) => c.lastSnapshotAt).filter((d): d is string => !!d).sort().at(-1) ?? null
   const ownerName = (ownerId: string | null) => profiles.find((p) => p.id === ownerId)?.display_name ?? null
 
-  // One main button per screen: the next thing the GM should do
-  const main: 'upload' | 'applied' | 'take' | 'game' =
-    pending.length > 0 ? 'upload' : downloaded.length > 0 ? 'applied' : pendingChanges.length > 0 ? 'take' : 'game'
+  // One main button per screen: the next thing the GM should do.
+  // While edits wait for a decision there is none: the decisions themselves come first.
+  const main: 'upload' | 'applied' | 'take' | 'close' | 'review' | 'game' =
+    pending.length > 0
+      ? 'upload'
+      : downloaded.length > 0
+        ? 'applied'
+        : counts.accepted > 0
+          ? 'take'
+          : counts.undecided > 0
+            ? 'review'
+            : counts.rejected > 0
+              ? 'close'
+              : 'game'
   const weight = (k: typeof main) => (main === k ? 'primary' : 'secondary')
 
   return (
@@ -175,9 +209,9 @@ export function GmPage() {
       {loadError && <p className="error">{loadError}</p>}
 
       <div className="button-stack">
-        {pendingChanges.length > 0 && (
+        {counts.accepted > 0 && (
           <BrushButton variant={weight('take')} icon="quill-scroll" block onClick={downloadChanges}>
-            Забрать правки · {pendingChanges.length}
+            Забрать принятые · {counts.accepted}
           </BrushButton>
         )}
         <BrushButton
@@ -250,18 +284,26 @@ export function GmPage() {
         </div>
       )}
 
-      {pendingChanges.length > 0 && (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span className="label-caps">Перенос в Foundry</span>
-          <span className="muted small">
-            Правок ждут: {pendingChanges.length}. «Забрать правки» скачает файл — примени его в Foundry макросом «Применить правки».
-          </span>
+      {lines.length > 0 && (
+        <ReviewChanges characters={characters} pending={pendingChanges} ownerName={ownerName} onDecide={decide}>
+          {counts.accepted > 0 && downloaded.length === 0 && (
+            <span className="muted small">«Забрать принятые» скачает файл — примени его в Foundry макросом «Применить правки».</span>
+          )}
           {downloaded.length > 0 && (
-            <BrushButton variant={weight('applied')} block onClick={() => markApplied(downloaded).then(() => setDownloaded([]))}>
-              Всё перенесено — отметить применёнными ({downloaded.length})
+            <BrushButton
+              variant={weight('applied')}
+              block
+              onClick={() => markApplied([...downloaded, ...rejectedIds]).then(() => setDownloaded([]))}
+            >
+              Всё перенесено — отметить применёнными
             </BrushButton>
           )}
-        </div>
+          {main === 'close' && (
+            <BrushButton variant="primary" block onClick={() => markApplied(rejectedIds)}>
+              Готово: убрать отклонённые из списка
+            </BrushButton>
+          )}
+        </ReviewChanges>
       )}
 
       {characters.length === 0 && !loadError && (
@@ -270,7 +312,7 @@ export function GmPage() {
         </EmptyState>
       )}
 
-      {characters.length > 0 && pendingChanges.length === 0 && (
+      {characters.length > 0 && lines.length === 0 && (
         <EmptyState image="empty-chest" alt="Открытый пустой сундук" title="Правок нет" red>
           {lastSnapshot
             ? `С последнего снимка ${formatDateTime(lastSnapshot)} игроки ничего не меняли.`
@@ -287,14 +329,9 @@ export function GmPage() {
               name={c.name}
               summary={summaries[c.id]}
               player={ownerName(c.ownerId)}
-              pending={pendingOf(c.id).length}
+              pending={waitingOf(c.id)}
               index={i}
             />
-            {pendingOf(c.id).length > 0 && (
-              <div className="card list nested">
-                <PendingChanges characterId={c.id} changes={pendingOf(c.id)} onMarkApplied={markApplied} />
-              </div>
-            )}
             <details className="card list nested">
               <summary className="list-row static">
                 <span className="grow muted small">
