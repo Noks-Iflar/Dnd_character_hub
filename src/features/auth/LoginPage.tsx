@@ -40,7 +40,11 @@ export function LoginPage() {
   return (
     <>
       <div className="art-header art-header-tall">
-        <img src={`${import.meta.env.BASE_URL}ui/art/login.jpg`} alt="Четверо путников на холме под луной" style={{ objectPosition: '30% center' }} />
+        <img
+          src={`${import.meta.env.BASE_URL}ui/art/login.jpg`}
+          alt="Дроу-бард с лютней, эльф в кожаном доспехе и рыцарь в кольчуге за столом с картой, свечой и кубиками"
+          style={{ objectPosition: '35% center' }}
+        />
         <div className="art-header-bar">
           <span />
           <ThemeToggle />
