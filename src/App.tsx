@@ -7,6 +7,7 @@ import { VersionPage } from './features/character/VersionPage'
 import { GmPage } from './features/gm-dashboard/GmPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { LibraryPage } from './features/library/LibraryPage'
+import { MapPage } from './features/map/MapPage'
 import { useNextSessionLabel } from './features/planner/use-next-session'
 import { PlannerPage } from './features/planner/PlannerPage'
 import { DiaryPage } from './features/lore/DiaryPage'
@@ -168,6 +169,7 @@ function App() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/planner" element={<PlannerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/map" element={<MapPage />} />
           {/* the old address of account settings */}
           <Route path="/account" element={<Navigate to="/settings" replace />} />
           <Route path="/diary/lore/:id" element={<LorePageView />} />
