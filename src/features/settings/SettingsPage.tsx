@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { BrushButton } from '../../components/BrushButton'
@@ -9,9 +9,11 @@ import { clearOffline } from '../../lib/offline'
 import { ROLE_LABEL, updateOwnProfile, useProfile, type Profile } from '../../lib/profile'
 import { supabase } from '../../lib/supabase'
 import { chooseTheme, useTheme } from '../../lib/theme'
+import { linkedAt, loadPrefs, PREFS_FOR, savePref, sendTest, setupBot, startLink, unlinkTelegram, type NotifyPref, type Prefs } from '../../lib/telegram'
 import { allZones, deviceZone, formatInZone, offsetLabel } from '../../lib/timezone'
+import { formatDateTime } from '../../lib/format-date'
 
-type Section = 'account' | 'timezone'
+type Section = 'account' | 'timezone' | 'telegram'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 /** "Asia/Tbilisi" -> "Tbilisi" */
@@ -176,6 +178,151 @@ function TimezonePanel({ profile, onSaved }: { profile: Profile; onSaved: (p: Pr
   )
 }
 
+/**
+ * «Уведомления в Telegram»: connect (one-time link to the bot), choose what to hear about,
+ * send a test, disconnect. The GM also points the bot at the server once.
+ */
+function TelegramPanel({ profile, onLinked }: { profile: Profile; onLinked: (at: string | null) => void }) {
+  const [linked, setLinked] = useState<string | null | undefined>(undefined)
+  const [prefs, setPrefs] = useState<Prefs | null>(null)
+  const [link, setLink] = useState<string | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const show = useCallback(
+    (at: string | null) => {
+      setLinked(at)
+      onLinked(at)
+      if (at) setLink(null)
+    },
+    [onLinked],
+  )
+  const refresh = useCallback(() => linkedAt(profile.id).then(show), [profile.id, show])
+
+  useEffect(() => {
+    linkedAt(profile.id).then(show, (e: unknown) => setStatus(errorText(e)))
+    loadPrefs(profile.id).then(setPrefs, (e: unknown) => setStatus(errorText(e)))
+  }, [profile.id, show])
+
+  // While the link to the bot is out, look every few seconds whether the bot has answered
+  useEffect(() => {
+    if (!link) return
+    const timer = window.setInterval(() => void refresh().catch(() => undefined), 3000)
+    const stop = window.setTimeout(() => setLink(null), 10 * 60 * 1000)
+    return () => {
+      window.clearInterval(timer)
+      window.clearTimeout(stop)
+    }
+  }, [link, refresh])
+
+  async function act(action: () => Promise<unknown>, done?: string) {
+    setBusy(true)
+    setStatus(null)
+    try {
+      await action()
+      if (done) setStatus(done)
+    } catch (e) {
+      setStatus(errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function connect() {
+    setBusy(true)
+    setStatus(null)
+    try {
+      const url = await startLink()
+      setLink(url)
+      // try to open Telegram right away; if the browser blocks it, the link button below stays
+      window.open(url, '_blank', 'noopener')
+    } catch (e) {
+      setStatus(errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function toggle(key: NotifyPref, on: boolean) {
+    if (!prefs) return
+    const before = prefs
+    setPrefs({ ...prefs, [key]: on })
+    savePref(profile.id, key, on).catch((e: unknown) => {
+      setPrefs(before)
+      setStatus(errorText(e))
+    })
+  }
+
+  return (
+    <div className="form">
+      {linked === undefined && <span className="muted small">Проверяю…</span>}
+      {linked === null && (
+        <>
+          <span className="muted small">
+            Ворон Длани будет писать тебе лично: о сборах, напоминаниях и новостях по листу. Время — в твоём часовом поясе.
+          </span>
+          <BrushButton icon="sealed-letter" block onClick={() => void connect()} disabled={busy}>
+            {busy ? 'Создаю ссылку…' : 'Подключить Telegram'}
+          </BrushButton>
+          {link && (
+            <>
+              <BrushButton variant="link" href={link}>
+                Открыть Telegram
+              </BrushButton>
+              <span className="muted small" aria-live="polite">
+                В Telegram нажми «Старт». Ссылка одноразовая и действует 10 минут; как только бот ответит, здесь станет «Подключено».
+              </span>
+            </>
+          )}
+        </>
+      )}
+      {linked && (
+        <>
+          <span className="small">Подключено {formatDateTime(linked)}</span>
+          {prefs && (
+            <fieldset className="check-list">
+              <legend className="muted small">О чём писать</legend>
+              {PREFS_FOR[profile.role].map(({ key, label }) => (
+                <label key={key} className="check-row">
+                  <input type="checkbox" checked={prefs[key]} onChange={(e) => toggle(key, e.target.checked)} />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+          )}
+          <BrushButton block disabled={busy} onClick={() => void act(sendTest, 'Пробное отправлено — загляни в Telegram.')}>
+            Отправить пробное
+          </BrushButton>
+          <BrushButton
+            variant="link"
+            danger
+            className="settings-inline-link"
+            disabled={busy}
+            onClick={() => void act(() => unlinkTelegram(profile.id).then(() => refresh()))}
+          >
+            Отключить
+          </BrushButton>
+        </>
+      )}
+      {profile.role === 'gm' && (
+        <div className="settings-note">
+          <span className="muted small">
+            Мастеру один раз после настройки секретов: связать бота с сервером. Без этого бот не услышит «Старт».
+          </span>
+          <BrushButton variant="link" className="settings-inline-link" disabled={busy} onClick={() => void act(setupBot, 'Бот связан с сервером.')}>
+            Связать бота с сервером
+          </BrushButton>
+        </div>
+      )}
+      {status && (
+        <span className="muted small" aria-live="polite">
+          {status}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function ThemeRow() {
   const theme = useTheme()
   return (
@@ -248,7 +395,9 @@ export function SettingsPage() {
   const email = auth.status === 'signed-in' ? (auth.session.user.email ?? null) : null
   const loaded = useProfile(userId)
   const [edited, setEdited] = useState<Profile | null>(null)
-  const [open, setOpen] = useState<Section | null>(params.get('open') === 'timezone' ? 'timezone' : null)
+  const asked = params.get('open')
+  const [open, setOpen] = useState<Section | null>(asked === 'timezone' || asked === 'telegram' ? asked : null)
+  const [telegram, setTelegram] = useState<string | null | undefined>(undefined)
   const ready = loaded.status === 'ready' ? loaded : null
   const profile = edited ?? ready?.profile ?? null
   const online = !!ready && !ready.offline
@@ -281,6 +430,17 @@ export function SettingsPage() {
             onToggle={() => toggle('timezone')}
           >
             {online ? <TimezonePanel profile={profile} onSaved={setEdited} /> : <p className="muted small">Нужна связь с сервером.</p>}
+          </ExpandRow>
+        )}
+        {profile && (
+          <ExpandRow
+            icon="sealed-letter"
+            title="Уведомления в Telegram"
+            value={telegram === undefined ? '' : telegram ? 'Подключено' : 'Не подключено'}
+            open={open === 'telegram'}
+            onToggle={() => toggle('telegram')}
+          >
+            {online ? <TelegramPanel profile={profile} onLinked={setTelegram} /> : <p className="muted small">Нужна связь с сервером.</p>}
           </ExpandRow>
         )}
         <ThemeRow />

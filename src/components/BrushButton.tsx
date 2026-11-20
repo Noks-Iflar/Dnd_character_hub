@@ -21,8 +21,10 @@ type Look = {
   children: ReactNode
 }
 
-type AsButton = Look & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'> & { to?: undefined }
-type AsLink = Look & { to: string; replace?: boolean; onClick?: () => void; 'aria-label'?: string }
+type AsButton = Look & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'> & { to?: undefined; href?: undefined }
+type AsLink = Look & { to: string; href?: undefined; replace?: boolean; onClick?: () => void; 'aria-label'?: string }
+/** A page outside the app (e.g. Telegram), opened in a new tab */
+type AsExternal = Look & { href: string; to?: undefined; onClick?: () => void }
 
 function brushClass({ variant = 'secondary', block, danger, className }: Omit<Look, 'children'>): string {
   return ['brush-btn', `brush-btn--${variant}`, block && 'brush-btn--block', danger && 'brush-btn--danger', className]
@@ -39,8 +41,8 @@ function Content({ icon, iconSize, variant, children }: Pick<Look, 'icon' | 'ico
   )
 }
 
-/** Every button of the app: one brush-stroke shape in three weights. Renders a real <button> or a router link. */
-export function BrushButton(props: AsButton | AsLink) {
+/** Every button of the app: one brush-stroke shape in three weights. Renders a real <button>, a router link or an <a>. */
+export function BrushButton(props: AsButton | AsLink | AsExternal) {
   const { variant = 'secondary', icon, iconSize, block, danger, className, children } = props
   const cls = brushClass({ variant, block, danger, className })
   const content = (
@@ -48,6 +50,13 @@ export function BrushButton(props: AsButton | AsLink) {
       {children}
     </Content>
   )
+  if (props.href !== undefined) {
+    return (
+      <a className={cls} href={props.href} target="_blank" rel="noopener noreferrer" onClick={props.onClick}>
+        {content}
+      </a>
+    )
+  }
   if (props.to !== undefined) {
     return (
       <Link className={cls} to={props.to} replace={props.replace} onClick={props.onClick} aria-label={props['aria-label']}>
@@ -55,7 +64,7 @@ export function BrushButton(props: AsButton | AsLink) {
       </Link>
     )
   }
-  const { variant: _v, icon: _i, iconSize: _s, block: _b, danger: _d, className: _c, children: _ch, to: _to, type = 'button', ...rest } = props
+  const { variant: _v, icon: _i, iconSize: _s, block: _b, danger: _d, className: _c, children: _ch, to: _to, href: _h, type = 'button', ...rest } = props
   return (
     <button type={type} className={cls} {...rest}>
       {content}

@@ -691,7 +691,7 @@ describe('notification triggers', () => {
     await runAs(ndb, GM, `update public.characters set status = 'in_game'`)
     const [event] = await queued()
     expect(event?.type).toBe('game_started')
-    expect([...(event?.character_ids as string[])].sort()).toEqual([velian, kairen].sort())
+    expect([...((event?.character_ids as string[] | undefined) ?? [])].sort()).toEqual([velian, kairen].sort())
     await runAs(ndb, GM, `update public.characters set status = 'between_sessions'`)
     expect(await queued()).toEqual([])
   })
