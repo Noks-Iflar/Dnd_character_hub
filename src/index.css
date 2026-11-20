@@ -1703,3 +1703,11 @@ details.add-entry > summary::-webkit-details-marker {
     height: 52px;
   }
 }
+
+/* ---- painted icons (public/ui/icons/<theme>) ---- */
+.themed-icon {
+  flex: none;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+}

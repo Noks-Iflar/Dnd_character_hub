@@ -1,9 +1,8 @@
-import { useState } from 'react'
-import { chooseTheme, currentTheme, type Theme } from '../lib/theme'
+import { chooseTheme, useTheme, type Theme } from '../lib/theme'
 
 /** Sun / moon button that switches between the parchment and the dark canvas theme. */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(currentTheme)
+  const theme = useTheme()
   const next: Theme = theme === 'dark' ? 'light' : 'dark'
   return (
     <button
@@ -13,7 +12,6 @@ export function ThemeToggle() {
       title={next === 'light' ? 'Светлая тема' : 'Тёмная тема'}
       onClick={() => {
         chooseTheme(next)
-        setTheme(next)
       }}
     >
       {theme === 'dark' ? (
