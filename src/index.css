@@ -898,58 +898,13 @@ button.attack-btn:hover {
   color: var(--text);
 }
 
-/* Full-width art at the top of a screen, fading into the background under the title */
-.art-header {
-  position: relative;
-  height: 200px;
-  margin: -12px -16px 0;
-  overflow: hidden;
-}
-.art-header-tall {
-  height: min(430px, 52vh);
-}
-.art-header > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.art-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 60%;
-  background: linear-gradient(to bottom, var(--fade0), var(--bg));
-}
-.art-header-bar {
-  position: absolute;
-  z-index: 1;
-  left: 16px;
-  right: 6px;
-  top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #e8e4dc;
-}
-.art-header-bar .brand,
-.art-header-bar .icon-btn {
-  color: #e8e4dc;
-}
 .art-title {
   position: relative;
   z-index: 1;
-  margin-top: -110px;
   padding: 0 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-.art-title-short {
-  margin-top: -60px;
 }
 .hero-title {
   font-family: var(--font-caps);
@@ -1069,10 +1024,6 @@ button.attack-btn:hover {
   text-align: right;
 }
 
-.art-header-banner {
-  height: 176px;
-  margin: 0 -16px;
-}
 .slot-tile {
   gap: 6px;
 }
@@ -1117,14 +1068,6 @@ button.attack-btn:hover {
   background: linear-gradient(var(--surface), var(--surface)), var(--bg);
 }
 
-.chip-on-art {
-  border: none;
-  background: rgba(24, 23, 26, 0.78);
-  color: #e8e4dc;
-}
-.chip-on-art::before {
-  display: none;
-}
 .action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1413,9 +1356,6 @@ details.add-entry > summary::-webkit-details-marker {
   display: inline-flex;
   margin-left: -10px;
 }
-.art-header-bar .nav-buttons .icon-btn {
-  color: #e8e4dc;
-}
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -1531,13 +1471,6 @@ details.add-entry > summary::-webkit-details-marker {
     max-width: 1120px;
     padding: 16px 32px 40px;
   }
-  .art-header {
-    margin: -16px -32px 0;
-    height: 240px;
-  }
-  .art-header-tall {
-    height: min(430px, 52vh);
-  }
   .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1605,10 +1538,6 @@ details.add-entry > summary::-webkit-details-marker {
 }
 .sheet-wide .roll-toast {
   bottom: 24px;
-}
-.sheet-pane .art-header {
-  margin: 0;
-  border-radius: var(--r1);
 }
 
 /* ---- two columns on desktop; on the phone the wrappers vanish and blocks stack as before ---- */
@@ -2189,5 +2118,23 @@ button.settings-row:focus-visible {
 @media (min-width: 1024px) {
   .art-hero {
     margin: -16px -32px 0;
+  }
+}
+
+/* sign-in title: 48 px up minus the 16 px gap of the page = 32 px into the faded bottom of the art */
+.art-title-over {
+  margin-top: -48px;
+}
+/* a line right under an art header (last snapshot, class and ability) */
+.art-subtitle {
+  margin-top: -10px;
+}
+.art-hero-inline {
+  margin: 0 -16px;
+}
+@media (min-width: 1024px) {
+  .sheet-pane .art-hero {
+    margin: 0;
+    border-radius: var(--r1);
   }
 }

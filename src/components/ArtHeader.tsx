@@ -1,4 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { NavButtons } from './NavMenu'
+import { SettingsLink } from './SettingsLink'
 
 /** Header arts in public/ui/art/headers/: header-<name>-800.webp, -1600.webp and -1600.jpg (fallback). */
 export type ArtName = 'login' | 'planner' | 'master' | 'lore' | 'magic'
@@ -20,6 +22,7 @@ export function ArtHeader({
   sizes = '(min-width: 1024px) 1120px, 100vw',
   top,
   children,
+  inline = false,
   className,
 }: {
   name: ArtName
@@ -33,11 +36,13 @@ export function ArtHeader({
   top?: ReactNode
   /** title over the bottom 25% */
   children?: ReactNode
+  /** not the first thing on the page (e.g. the «Магия» tab under the sheet header) */
+  inline?: boolean
   className?: string
 }) {
   const style = { '--focus-y': String(Math.min(1, Math.max(0, focusY))) } as CSSProperties
   return (
-    <div className={className ? `art-hero ${className}` : 'art-hero'} style={style}>
+    <div className={['art-hero', inline && 'art-hero-inline', className].filter(Boolean).join(' ')} style={style}>
       <picture>
         <source type="image/webp" srcSet={`${base}${name}-800.webp 800w, ${base}${name}-1600.webp 1600w`} sizes={sizes} />
         <img
@@ -53,5 +58,19 @@ export function ArtHeader({
       {top && <div className="art-hero-top">{top}</div>}
       {children && <div className="art-hero-bottom">{children}</div>}
     </div>
+  )
+}
+
+/** Corner controls of a screen with an art header: menu and back on the left, settings on the right. */
+export function ArtNav() {
+  return (
+    <>
+      <span className="art-pill">
+        <NavButtons />
+      </span>
+      <span className="art-pill">
+        <SettingsLink />
+      </span>
+    </>
   )
 }

@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { SettingsLink } from '../../components/SettingsLink'
 import { useAuth } from '../../lib/auth-context'
 import { listProfiles } from '../../lib/db'
 import {
@@ -25,6 +23,7 @@ import {
 import { useProfile, type Profile } from '../../lib/profile'
 import { deviceZone, formatInZone, fromWall, offsetLabel } from '../../lib/timezone'
 import { BrushButton } from '../../components/BrushButton'
+import { ArtHeader, ArtNav } from '../../components/ArtHeader'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
@@ -191,20 +190,9 @@ export function PlannerPage() {
 
   return (
     <>
-      <div className="art-header">
-        <img src={`${import.meta.env.BASE_URL}ui/art/planner.jpg`} alt="Путники у костра, рядом песочные часы" style={{ objectPosition: 'center 40%' }} />
-        <div className="art-header-bar">
-          <span className="app-header-nav">
-            <NavButtons />
-            <BrandLink />
-          </span>
-          <SettingsLink />
-        </div>
-      </div>
-      <div className="art-title art-title-short">
-        <h1 style={{ fontSize: 32 }}>Следующая сессия</h1>
-        <span className="brush-underline" aria-hidden="true" />
-      </div>
+      <ArtHeader name="planner" alt="Герои у ночного костра, Муарен сверяется с часами" focusY={0.4} top={<ArtNav />}>
+        <h1>Следующая сессия</h1>
+      </ArtHeader>
 
       {error && <p className="error">{error}</p>}
       <div className="two-col planner-layout">

@@ -3,6 +3,7 @@ import { Description, Pips } from '../bits'
 import { signed } from '../format'
 import { ruLabel } from '../labels'
 import type { TabProps } from '../sheet-ui'
+import { ArtHeader } from '../../../components/ArtHeader'
 
 const ABILITY_NAME: Record<string, string> = {
   str: 'Сила',
@@ -31,11 +32,16 @@ export function MagicTab({ sheet, rollD20 }: TabProps) {
 
   return (
     <>
-      <div className="art-header art-header-banner">
-        <img src={`${import.meta.env.BASE_URL}ui/art/magic.jpg`} alt="Заклинатель вызывает фиолетовое пламя в руинах" style={{ objectPosition: '30% 30%' }} />
-      </div>
-      <div className="art-title art-title-short">
-        <h1 style={{ fontSize: 32 }}>Магия</h1>
+      <ArtHeader
+        name="magic"
+        alt="Дроу-заклинатель вызывает фиолетовое пламя в руинах"
+        focusY={0.35}
+        inline
+        sizes="(min-width: 1024px) 540px, 100vw"
+      >
+        <h1>Магия</h1>
+      </ArtHeader>
+      <div className="art-subtitle">
         <span className="muted small">
           {[classLine, ability ? `заклинательная характеристика — ${ABILITY_NAME[ability] ?? ABILITY_LABEL[ability]}` : null]
             .filter(Boolean)
