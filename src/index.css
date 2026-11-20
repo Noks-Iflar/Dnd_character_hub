@@ -1973,3 +1973,86 @@ button.settings-row:focus-visible {
   object-fit: contain;
   user-select: none;
 }
+
+/* ---- GM review of player edits ---- */
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.review-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.review-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-line {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--r-small1);
+}
+.review-line:nth-child(even) {
+  border-radius: var(--r-small2);
+}
+.review-line.accepted {
+  border-left-color: var(--tech);
+}
+.review-line.rejected {
+  border-left-color: var(--blood);
+}
+.review-line.rejected .review-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.review-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.review-decision {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.review-decision button.accept[aria-pressed='true'] {
+  background: var(--tech);
+  color: var(--bg);
+  font-weight: 700;
+}
+.review-decision button.reject[aria-pressed='true'] {
+  background: var(--blood);
+  color: var(--on-blood);
+  font-weight: 700;
+}
+.review-accept-all {
+  align-self: flex-start;
+  margin-left: -8px;
+}
+@media (min-width: 1024px) {
+  .review-line {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .review-decision {
+    flex: none;
+    width: 260px;
+  }
+}
