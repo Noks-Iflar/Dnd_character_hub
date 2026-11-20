@@ -2103,3 +2103,91 @@ button.settings-row:focus-visible {
   padding-top: 8px;
   border-top: 1px dashed var(--line);
 }
+
+/* ---- ArtHeader: painted art in its own proportion ---- */
+:root {
+  /* light text and a dark see-through pill: readable on any part of any art, in both themes */
+  --on-art: #f4f1ea;
+  --art-pill: rgba(17, 17, 19, 0.55);
+}
+.art-hero {
+  position: relative;
+  /* bleed to the screen edges over the page padding */
+  margin: -12px -16px 0;
+  aspect-ratio: 2576 / 1274;
+  max-height: 360px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.art-hero picture,
+.art-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.art-hero img {
+  object-fit: cover;
+  object-position: 50% calc(var(--focus-y, 0.5) * 100%);
+}
+.art-hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 35%;
+  background: linear-gradient(to bottom, var(--fade0), var(--bg));
+  pointer-events: none;
+}
+.art-hero-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.art-hero-top > * {
+  pointer-events: auto;
+}
+.art-hero-bottom {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 25%;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+.art-hero-bottom h1 {
+  margin: 0;
+  font-size: clamp(22px, 7vw, 34px);
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* corner controls on the art: light glyphs on a dark see-through pill */
+.art-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--art-pill);
+  color: var(--on-art);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.art-pill .icon-btn,
+.art-pill .nav-buttons .icon-btn {
+  color: var(--on-art);
+}
+.art-pill .nav-buttons {
+  margin-left: 0;
+}
+@media (min-width: 1024px) {
+  .art-hero {
+    margin: -16px -32px 0;
+  }
+}
