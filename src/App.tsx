@@ -7,7 +7,7 @@ import { VersionPage } from './features/character/VersionPage'
 import { GmPage } from './features/gm-dashboard/GmPage'
 import { AccountPage } from './features/account/AccountPage'
 import { LibraryPage } from './features/library/LibraryPage'
-import { NextSessionLink } from './features/planner/NextSessionLink'
+import { useNextSessionLabel } from './features/planner/use-next-session'
 import { PlannerPage } from './features/planner/PlannerPage'
 import { DiaryPage } from './features/lore/DiaryPage'
 import { LorePageView } from './features/lore/LorePageView'
@@ -16,16 +16,17 @@ import { SheetPage } from './features/sheet/SheetPage'
 import { StatusPage } from './features/status/StatusPage'
 import { useAuth } from './lib/auth-context'
 import { listCharacters, type Character } from './lib/db'
-import { clearOffline, isOffline, loadOffline, offlineSnapshot, onlineOr, saveCharacters } from './lib/offline'
+import { isOffline, loadOffline, offlineSnapshot, onlineOr, saveCharacters } from './lib/offline'
 import { parseSnapshotJson } from './lib/snapshot/parse'
 import { buildSheet } from './lib/snapshot/sheet'
 import { loadSummaries, type CharacterSummary } from './lib/summary'
 import { useProfile, type UserRole } from './lib/profile'
-import { supabase } from './lib/supabase'
 import { AppHeader } from './components/AppHeader'
 import { BrushButton } from './components/BrushButton'
 import { CharacterCard } from './components/CharacterCard'
+import { MenuTile } from './components/MenuTile'
 import { Sidebar } from './components/NavMenu'
+import { useHasAccount } from './lib/use-account'
 import { useWide } from './lib/use-wide'
 import { EmptyState } from './components/EmptyState'
 
@@ -94,39 +95,23 @@ function offlineSummaries(characters: Character[]): Record<string, CharacterSumm
   return out
 }
 
-function Home({ userId, email }: { userId: string; email: string | undefined }) {
+function Home({ userId }: { userId: string }) {
   const profile = useProfile(userId)
-  const isGm = profile.status === 'ready' && profile.profile.role === 'gm'
+  const ready = profile.status === 'ready' ? profile : null
+  const isGm = ready?.profile.role === 'gm'
+  const nextSession = useNextSessionLabel(ready && !ready.offline ? ready.profile.timezone : null)
   return (
     <>
-      <AppHeader>
-        <BrushButton
-          variant="link"
-          onClick={() => {
-            clearOffline()
-            void supabase?.auth.signOut()
-          }}
-        >
-          Выйти
-        </BrushButton>
-      </AppHeader>
+      <AppHeader
+        menu={false}
+        badge={ready && <span className={isGm ? 'chip chip-blood' : 'chip chip-tech'}>{ROLE_LABEL[ready.profile.role]}</span>}
+      />
       <div>
-        <h1 style={{ fontSize: 40 }}>
-          {profile.status === 'ready' && profile.profile.display_name ? profile.profile.display_name : 'Dnd Hub'}
-        </h1>
+        <h1 style={{ fontSize: 40 }}>{ready?.profile.display_name || 'Dnd Hub'}</h1>
         <span className="subtitle">Кампания «Хвор»</span>
       </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        {profile.status === 'ready' && (
-          <span className={isGm ? 'chip chip-blood' : 'chip chip-tech'}>{ROLE_LABEL[profile.profile.role]}</span>
-        )}
-        {profile.status === 'error' && <span className="error">{profile.message}</span>}
-        <span className="muted small">{email}</span>
-      </div>
-
-      {profile.status === 'ready' && profile.offline && (
-        <p className="chip chip-tech">Нет связи с сервером: офлайн-режим, только просмотр</p>
-      )}
+      {profile.status === 'error' && <p className="error">{profile.message}</p>}
+      {ready?.offline && <p className="chip chip-tech">Нет связи с сервером: офлайн-режим, только просмотр</p>}
 
       {isGm && (
         <BrushButton variant="primary" icon="dm-screen" block to="/gm">
@@ -134,23 +119,20 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
         </BrushButton>
       )}
 
-      {profile.status === 'ready' && !profile.offline && <NextSessionLink zone={profile.profile.timezone} />}
-
       <h2 className="section-title">{isGm ? 'Все персонажи' : 'Мои персонажи'}</h2>
-      {profile.status === 'ready' && <MyCharacters isGm={isGm} userId={userId} />}
+      {ready && <MyCharacters isGm={isGm} userId={userId} />}
 
-      {/* the desktop sidebar already has these links */}
-      <div className="home-links">
-        <div className="action-row">
-          <BrushButton to="/diary">Дневник</BrushButton>
-          <BrushButton to="/library">Библиотека</BrushButton>
-        </div>
-        <BrushButton to="/account">Аккаунт и часовой пояс</BrushButton>
-        <BrushButton to="/sheet">Открыть лист из файла</BrushButton>
-        <BrushButton variant="link" to="/status">
-          Проверка доступа
-        </BrushButton>
-      </div>
+      <nav className="menu-grid" aria-label="Разделы">
+        <MenuTile to="/planner" icon="pocket-watch" label="Планировщик сессий" note={nextSession} />
+        <MenuTile to="/diary" icon="journal" label="Дневник" />
+        <MenuTile to="/library" icon="bookshelf" label="Библиотека" />
+        <MenuTile to="/map" icon="map" label="Карта мира" />
+      </nav>
+
+      {/* an action, not a section: a button rather than a tile */}
+      <BrushButton icon="character-sheet" block to="/sheet">
+        Открыть лист из файла
+      </BrushButton>
     </>
   )
 }
@@ -166,15 +148,15 @@ function RequireAuth() {
 
 function HomeRoute() {
   const auth = useAuth()
-  if (auth.status === 'signed-in') return <Home userId={auth.session.user.id} email={auth.session.user.email} />
+  if (auth.status === 'signed-in') return <Home userId={auth.session.user.id} />
   const cached = loadOffline()
-  return cached ? <Home userId={cached.userId} email={undefined} /> : null
+  return cached ? <Home userId={cached.userId} /> : null
 }
 
 function App() {
-  const auth = useAuth()
   const wide = useWide()
-  const sidebar = wide && (auth.status === 'signed-in' || (auth.status === 'signed-out' && isOffline() && !!loadOffline()))
+  const hasAccount = useHasAccount()
+  const sidebar = wide && hasAccount
   return (
     <div className={sidebar ? 'shell with-sidebar' : 'shell'}>
       {sidebar && <Sidebar />}

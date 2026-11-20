@@ -21,7 +21,7 @@ import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { CharacterCard } from '../../components/CharacterCard'
 import { EmptyState } from '../../components/EmptyState'
 import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { ThemeToggle } from '../../components/ThemeToggle'
+import { SettingsLink } from '../../components/SettingsLink'
 import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
 import { PendingChanges } from './PendingChanges'
@@ -162,7 +162,7 @@ export function GmPage() {
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="chip chip-on-art">Мастер</span>
-            <ThemeToggle />
+            <SettingsLink />
           </span>
         </div>
       </div>

@@ -60,10 +60,10 @@ function NavList({ onGo }: { onGo: () => void }) {
         <MenuLink to="/planner" onGo={onClose}>Планировщик</MenuLink>
         <MenuLink to="/diary" onGo={onClose}>Дневник</MenuLink>
         <MenuLink to="/library" onGo={onClose}>Библиотека</MenuLink>
+        <MenuLink to="/map" onGo={onClose}>Карта мира</MenuLink>
         <span className="drawer-caption">Ещё</span>
-        <MenuLink to="/account" onGo={onClose}>Аккаунт и часовой пояс</MenuLink>
         <MenuLink to="/sheet" onGo={onClose}>Открыть лист из файла</MenuLink>
-        <MenuLink to="/status" onGo={onClose}>Проверка доступа</MenuLink>
+        <MenuLink to="/settings" onGo={onClose}>Настройки</MenuLink>
         {auth.status === 'signed-in' && (
           <button
             type="button"
@@ -118,7 +118,7 @@ export function Sidebar() {
 }
 
 /** Menu (☰) and back (‹) buttons for the left side of every header. */
-export function NavButtons() {
+export function NavButtons({ menu = true }: { menu?: boolean }) {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -134,7 +134,7 @@ export function NavButtons() {
 
   return (
     <span className="nav-buttons">
-      {!wide && (
+      {menu && !wide && (
         <button type="button" className="icon-btn" aria-label="Меню" aria-expanded={open} onClick={() => setOpen(true)}>
           <svg {...ICON}>
             <path d="M4 7h16M4 12h16M4 17h16" />

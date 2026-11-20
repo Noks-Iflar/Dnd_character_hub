@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { ThemeToggle } from '../../components/ThemeToggle'
+import { SettingsLink } from '../../components/SettingsLink'
 import { useAuth } from '../../lib/auth-context'
 import { listProfiles } from '../../lib/db'
 import {
@@ -198,7 +198,7 @@ export function PlannerPage() {
             <NavButtons />
             <BrandLink />
           </span>
-          <ThemeToggle />
+          <SettingsLink />
         </div>
       </div>
       <div className="art-title art-title-short">

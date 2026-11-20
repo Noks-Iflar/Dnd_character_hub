@@ -1544,9 +1544,6 @@ details.add-entry > summary::-webkit-details-marker {
     gap: 12px;
     align-items: start;
   }
-  .page .home-links {
-    display: none;
-  }
   .page > .brush-btn {
     align-self: flex-start;
     min-width: 360px;
@@ -1558,11 +1555,6 @@ details.add-entry > summary::-webkit-details-marker {
   }
 }
 
-.home-links {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 /* ---- desktop sheet: "Лист" on the left, chosen tab on the right ---- */
 .sheet-wide {
@@ -1770,5 +1762,69 @@ details.add-entry > summary::-webkit-details-marker {
   }
   .button-stack > .brush-btn {
     flex: 1 1 240px;
+  }
+}
+
+/* ---- MenuTile: sections as cards ---- */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.menu-tile {
+  min-height: 112px;
+  box-sizing: border-box;
+  padding: 14px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms ease-out;
+}
+.menu-tile:nth-child(4n + 2) {
+  border-radius: var(--r2);
+}
+.menu-tile:nth-child(4n + 3) {
+  border-radius: var(--r3);
+}
+.menu-tile:nth-child(4n + 4) {
+  border-radius: var(--r2);
+}
+.menu-tile:hover {
+  color: var(--text-strong);
+  border-color: var(--line-strong);
+}
+.menu-tile:active {
+  transform: scale(0.98);
+}
+.menu-tile:focus {
+  outline: none;
+}
+.menu-tile:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 3px;
+}
+.menu-tile-note {
+  margin-top: -4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.app-header-nav .chip {
+  margin-left: 8px;
+}
+@media (min-width: 1024px) {
+  .menu-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
