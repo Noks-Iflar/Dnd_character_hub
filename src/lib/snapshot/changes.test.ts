@@ -54,6 +54,16 @@ describe('applyChanges', () => {
     expect([...editedPaths].sort()).toEqual(['items.abcdefghij012345.system.equipped', 'system.attributes.hp.value', 'system.currency.gp'])
   })
 
+  it('leaves out edits the GM rejected', () => {
+    const rejected = { ...change('system.currency.gp', 500, '2026-11-16T12:00:00Z'), review: 'rejected' as const }
+    const { snapshot: edited, editedPaths } = applyChanges(snapshot, [change('system.currency.gp', 7, '2026-11-16T11:00:00Z'), rejected])
+    expect(readPath(edited.source, 'system.currency.gp')).toBe(7)
+    const none = applyChanges(snapshot, [rejected])
+    expect(readPath(none.snapshot.source, 'system.currency.gp')).toBe(5)
+    expect(none.editedPaths.size).toBe(0)
+    expect(editedPaths.has('system.currency.gp')).toBe(true)
+  })
+
   it('adds library items as pending inventory entries', () => {
     const add: Change = {
       id: 'c42',

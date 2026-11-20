@@ -1,7 +1,7 @@
 // Data access for characters and snapshots. RLS decides what each user sees.
 import { parseSnapshotJson } from './snapshot/parse'
 import { get, isObject, str, type JsonObject } from './snapshot/read'
-import type { Change, ChangeValue } from './snapshot/changes'
+import type { Change, ChangeValue, Review } from './snapshot/changes'
 import type { Snapshot } from './snapshot/types'
 import { supabase } from './supabase'
 import type { Profile } from './profile'
@@ -143,6 +143,8 @@ export async function getCharacter(id: string): Promise<Character | null> {
 }
 
 const changeValue = (v: unknown): ChangeValue | null => (typeof v === 'number' || typeof v === 'boolean' ? v : null)
+const reviewOf = (v: unknown): Review => (v === 'accepted' || v === 'rejected' ? v : null)
+const CHANGE_COLUMNS = 'id, kind, item_uuid, item_name, item_type, path, old_value, new_value, created_at, applied_at, review'
 
 function toChange(row: unknown): Change | null {
   if (!isObject(row)) return null
@@ -162,6 +164,7 @@ function toChange(row: unknown): Change | null {
     newValue,
     createdAt,
     appliedAt: str(row.applied_at),
+    review: reviewOf(row.review),
   }
 }
 
@@ -169,7 +172,7 @@ function toChange(row: unknown): Change | null {
 export async function listChanges(snapshotId: string): Promise<Change[]> {
   const { data, error } = await client()
     .from('changes')
-    .select('id, kind, item_uuid, item_name, item_type, path, old_value, new_value, created_at, applied_at')
+    .select(CHANGE_COLUMNS)
     .eq('snapshot_id', snapshotId)
     .order('created_at')
   if (error) throw new Error(error.message)
@@ -208,11 +211,11 @@ export async function setCharacterStatus(characterIds: string[], status: Charact
 
 export type PendingChange = Change & { characterId: string; snapshotId: string }
 
-/** Edits not yet applied in Foundry, oldest first (GM sees all characters). */
+/** Edits the GM has not finished with (not applied in Foundry, rejections not yet closed), oldest first. */
 export async function listPendingChanges(): Promise<PendingChange[]> {
   const { data, error } = await client()
     .from('changes')
-    .select('id, character_id, snapshot_id, kind, item_uuid, item_name, item_type, path, old_value, new_value, created_at, applied_at')
+    .select(`character_id, snapshot_id, ${CHANGE_COLUMNS}`)
     .is('applied_at', null)
     .order('created_at')
   if (error) throw new Error(error.message)
@@ -226,6 +229,14 @@ export async function listPendingChanges(): Promise<PendingChange[]> {
   return out
 }
 
+/** The GM's decision on these journal rows (null takes it back). */
+export async function setReview(changeIds: string[], review: Review): Promise<void> {
+  if (!changeIds.length) return
+  const { error } = await client().from('changes').update({ review }).in('id', changeIds)
+  if (error) throw new Error(error.message)
+}
+
+/** The GM is done with these rows: accepted ones were applied in Foundry, rejected ones are closed. */
 export async function markChangesApplied(changeIds: string[]): Promise<void> {
   if (!changeIds.length) return
   const { error } = await client().from('changes').update({ applied_at: new Date().toISOString() }).in('id', changeIds)

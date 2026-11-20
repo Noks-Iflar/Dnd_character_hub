@@ -9,11 +9,12 @@ const change = (o: Partial<PendingChange> & Pick<PendingChange, 'id' | 'path' | 
   oldValue: null,
   appliedAt: null,
   kind: 'set',
+  review: 'accepted',
   ...o,
 })
 
 describe('buildChangesFile', () => {
-  it('keeps the final value per field and every added item; skips characters without edits', () => {
+  it('keeps the final value per accepted field and every accepted item; skips characters without edits', () => {
     const file = buildChangesFile(
       [character('c1', 'actorA'), character('c2', 'actorB')],
       [
@@ -32,7 +33,7 @@ describe('buildChangesFile', () => {
         {
           actorId: 'actorA',
           name: 'c1',
-          changeIds: ['x1', 'x2', 'x3', 'x4'],
+          changeIds: ['x1', 'x2', 'x3'],
           changes: [
             { kind: 'set', path: 'system.attributes.hp.value', value: 22, was: 35 },
             { kind: 'add_item', uuid: 'Compendium.x.Item.p', name: 'Зелье', quantity: 2, type: null },
@@ -40,5 +41,23 @@ describe('buildChangesFile', () => {
         },
       ],
     })
+  })
+
+  it('leaves out undecided and rejected lines, and characters with nothing accepted', () => {
+    const hp = 'system.attributes.hp.value'
+    const file = buildChangesFile(
+      [character('c1', 'actorA'), character('c2', 'actorB')],
+      [
+        change({ id: 'a1', path: hp, oldValue: 59, newValue: 40, createdAt: '2026-11-16T10:00:00Z' }),
+        // a newer edit of the same field is not decided yet: the whole line waits
+        change({ id: 'a2', path: hp, oldValue: 40, newValue: 52, createdAt: '2026-11-16T11:00:00Z', review: null }),
+        change({ id: 'a3', path: 'system.currency.gp', oldValue: 5, newValue: 500, createdAt: '2026-11-16T10:00:00Z', review: 'rejected' }),
+        change({ id: 'a4', path: 'system.currency.sp', oldValue: 1, newValue: 3, createdAt: '2026-11-16T10:30:00Z' }),
+        change({ id: 'b1', characterId: 'c2', path: hp, newValue: 1, createdAt: '2026-11-16T10:00:00Z', review: 'rejected' }),
+      ],
+    )
+    expect(file.characters).toEqual([
+      { actorId: 'actorA', name: 'c1', changeIds: ['a4'], changes: [{ kind: 'set', path: 'system.currency.sp', value: 3, was: 1 }] },
+    ])
   })
 })

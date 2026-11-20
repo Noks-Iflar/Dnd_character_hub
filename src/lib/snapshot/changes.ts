@@ -3,6 +3,9 @@ import type { Snapshot } from './types'
 
 export type ChangeValue = number | boolean
 
+/** The GM's decision on an edit: null = not decided yet (and edits from before review existed). */
+export type Review = 'accepted' | 'rejected' | null
+
 /**
  * One journal entry. kind "set": "field at `path` became `newValue`".
  * kind "add_item": add `newValue` pieces of the library item `itemUuid` (path is "add-item").
@@ -18,6 +21,7 @@ export type Change = {
   newValue: ChangeValue
   createdAt: string
   appliedAt: string | null
+  review?: Review
 }
 
 const ITEM_PATH = /^items\.([A-Za-z0-9]{16})\.(system\..+)$/
@@ -81,13 +85,15 @@ function writePath(source: JsonObject, path: string, value: ChangeValue): boolea
 
 /**
  * Sheet = snapshot source + edits. Edits apply in time order (last one wins);
- * the snapshot itself is never modified. Unknown paths and missing items are skipped.
+ * the snapshot itself is never modified. Unknown paths, missing items and edits
+ * the GM rejected are skipped.
  */
 export function applyChanges(snapshot: Snapshot, changes: Change[]): { snapshot: Snapshot; editedPaths: Set<string> } {
   const source = structuredClone(snapshot.source)
   const editedPaths = new Set<string>()
   const ordered = [...changes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   for (const change of ordered) {
+    if (change.review === 'rejected') continue
     if (change.kind === 'add_item') {
       if (typeof change.newValue !== 'number' || !change.itemName) continue
       const items = Array.isArray(source.items) ? source.items : (source.items = [])
