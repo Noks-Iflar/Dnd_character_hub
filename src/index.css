@@ -1047,7 +1047,7 @@ button.attack-btn:hover {
   border-radius: var(--r3);
 }
 .segmented button {
-  min-height: 40px;
+  min-height: 44px;
   background: transparent;
   border: none;
   border-radius: var(--r-small1);
@@ -1267,7 +1267,7 @@ details.add-entry > summary::-webkit-details-marker {
   gap: 6px;
 }
 .chip-row .toggle {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   font-size: 14px;
 }
@@ -1357,7 +1357,7 @@ details.add-entry > summary::-webkit-details-marker {
 }
 /* Cell shade grows with the share of people free; everyone free = solid blue */
 .planner-cell {
-  height: 42px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 7px 4px 6px 3px / 4px 6px 3px 7px;
@@ -1830,4 +1830,108 @@ details.add-entry > summary::-webkit-details-marker {
 }
 .history-btn {
   align-self: flex-start;
+}
+
+/* ---- settings ---- */
+.settings-list {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-item + .settings-item {
+  border-top: 1px solid var(--line);
+}
+.settings-row {
+  width: 100%;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  text-align: left;
+}
+button.settings-row {
+  cursor: pointer;
+}
+button.settings-row:focus {
+  outline: none;
+}
+button.settings-row:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: -3px;
+}
+.settings-row-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.settings-row-icon.line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.settings-row-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-row-value {
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+.settings-row-result {
+  font-size: 14px;
+  color: var(--tech);
+}
+.settings-row-result.error {
+  color: var(--blood-text);
+}
+.settings-chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 120ms ease-out;
+}
+.settings-chevron.open {
+  transform: rotate(90deg);
+}
+.settings-panel {
+  margin: 0;
+  padding: 4px 14px 16px;
+}
+.settings-switch {
+  flex: none;
+  grid-template-columns: repeat(2, auto);
+}
+.settings-switch button {
+  padding: 0 12px;
+}
+.settings-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 15px;
+}
+.settings-facts dt {
+  color: var(--text-muted);
+}
+.settings-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.settings-signout {
+  align-self: center;
 }

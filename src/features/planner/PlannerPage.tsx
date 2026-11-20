@@ -278,7 +278,7 @@ export function PlannerPage() {
           ‹
         </button>
         <span className="muted small" style={{ textAlign: 'center' }}>
-          Неделя {weekLabel(monday)}, время твоё ({offsetLabel(now, zone)}). <Link to="/account">Сменить пояс</Link>
+          Неделя {weekLabel(monday)}, время твоё ({offsetLabel(now, zone)}). <Link to="/settings?open=timezone">Сменить пояс</Link>
         </span>
         <button type="button" className="icon-btn" aria-label="Следующая неделя" onClick={() => setWeekOffset((w) => w + 1)}>
           ›

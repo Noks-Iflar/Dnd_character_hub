@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Outlet, Route, Routes } from 'react-router'
+import { Navigate, Outlet, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
 import { CharacterPage } from './features/character/CharacterPage'
 import { HistoryPage } from './features/character/HistoryPage'
 import { VersionPage } from './features/character/VersionPage'
 import { GmPage } from './features/gm-dashboard/GmPage'
-import { AccountPage } from './features/account/AccountPage'
+import { SettingsPage } from './features/settings/SettingsPage'
 import { LibraryPage } from './features/library/LibraryPage'
 import { useNextSessionLabel } from './features/planner/use-next-session'
 import { PlannerPage } from './features/planner/PlannerPage'
@@ -20,7 +20,7 @@ import { isOffline, loadOffline, offlineSnapshot, onlineOr, saveCharacters } fro
 import { parseSnapshotJson } from './lib/snapshot/parse'
 import { buildSheet } from './lib/snapshot/sheet'
 import { loadSummaries, type CharacterSummary } from './lib/summary'
-import { useProfile, type UserRole } from './lib/profile'
+import { ROLE_LABEL, useProfile } from './lib/profile'
 import { AppHeader } from './components/AppHeader'
 import { BrushButton } from './components/BrushButton'
 import { CharacterCard } from './components/CharacterCard'
@@ -29,8 +29,6 @@ import { Sidebar } from './components/NavMenu'
 import { useHasAccount } from './lib/use-account'
 import { useWide } from './lib/use-wide'
 import { EmptyState } from './components/EmptyState'
-
-const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
 
 function MyCharacters({ isGm, userId }: { isGm: boolean; userId: string }) {
   const [characters, setCharacters] = useState<Character[] | null>(null)
@@ -169,7 +167,9 @@ function App() {
           <Route path="/diary" element={<DiaryPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/planner" element={<PlannerPage />} />
-          <Route path="/account" element={<AccountPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          {/* the old address of account settings */}
+          <Route path="/account" element={<Navigate to="/settings" replace />} />
           <Route path="/diary/lore/:id" element={<LorePageView />} />
           <Route path="/diary/session/:id" element={<SessionView />} />
           <Route path="/character/:id" element={<CharacterPage />} />

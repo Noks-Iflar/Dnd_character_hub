@@ -9,7 +9,18 @@ import { ThemeToggle } from './ThemeToggle'
  * page actions and the settings gear on the right. Without an account (file viewer, login)
  * settings are out of reach, so the theme switch stays in the header.
  */
-export function AppHeader({ children, badge, menu = true }: { children?: ReactNode; badge?: ReactNode; menu?: boolean }) {
+export function AppHeader({
+  children,
+  badge,
+  menu = true,
+  settings = true,
+}: {
+  children?: ReactNode
+  badge?: ReactNode
+  menu?: boolean
+  /** false on the settings screen itself */
+  settings?: boolean
+}) {
   const hasAccount = useHasAccount()
   return (
     <header className="app-header">
@@ -20,7 +31,7 @@ export function AppHeader({ children, badge, menu = true }: { children?: ReactNo
       </span>
       <div className="app-header-actions">
         {children}
-        {hasAccount ? <SettingsLink /> : <ThemeToggle />}
+        {!hasAccount ? <ThemeToggle /> : settings && <SettingsLink />}
       </div>
     </header>
   )

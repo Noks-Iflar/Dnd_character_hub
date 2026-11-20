@@ -1,36 +1,16 @@
 import { useEffect, useState } from 'react'
 import { AppHeader } from '../../components/AppHeader'
-import { supabaseAnonKey, supabaseUrl } from '../../lib/supabase'
+import { checkSupabase, hasKeys, type CheckResult } from '../../lib/connection'
+import { supabaseUrl } from '../../lib/supabase'
 import { BrushButton } from '../../components/BrushButton'
 
-type CheckResult =
-  | { state: 'no-keys' }
-  | { state: 'checking' }
-  | { state: 'ok'; ms: number }
-  | { state: 'error'; message: string }
-
-async function checkSupabase(url: string, key: string): Promise<CheckResult> {
-  const started = performance.now()
-  try {
-    // Auth health endpoint: answers without any tables in the database
-    const res = await fetch(`${url}/auth/v1/health`, { headers: { apikey: key } })
-    if (!res.ok) return { state: 'error', message: `Сервер ответил кодом ${res.status}` }
-    return { state: 'ok', ms: Math.round(performance.now() - started) }
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e)
-    return { state: 'error', message: `Нет связи: ${message}` }
-  }
-}
-
 export function StatusPage() {
-  const [result, setResult] = useState<CheckResult>(
-    supabaseUrl && supabaseAnonKey ? { state: 'checking' } : { state: 'no-keys' },
-  )
+  const [result, setResult] = useState<CheckResult>(hasKeys() ? { state: 'checking' } : { state: 'no-keys' })
 
   useEffect(() => {
-    if (!supabaseUrl || !supabaseAnonKey) return
+    if (!hasKeys()) return
     let cancelled = false
-    checkSupabase(supabaseUrl, supabaseAnonKey).then((r) => {
+    checkSupabase().then((r) => {
       if (!cancelled) setResult(r)
     })
     return () => {

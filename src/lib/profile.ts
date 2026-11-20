@@ -4,6 +4,8 @@ import { supabase } from './supabase'
 
 export type UserRole = 'gm' | 'player'
 
+export const ROLE_LABEL: Record<UserRole, string> = { gm: 'Мастер', player: 'Игрок' }
+
 export type Profile = {
   id: string
   display_name: string
