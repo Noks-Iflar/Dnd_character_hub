@@ -588,3 +588,57 @@ describe('GM review of edits', () => {
   })
 })
 
+describe('telegram notifications', () => {
+  let tdb: PGlite
+
+  beforeAll(async () => {
+    tdb = await createDb()
+    await tdb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+      -- the server function (service role, bypasses RLS) connected Anya
+      insert into public.telegram_links (user_id, chat_id) values ('${P1}', 111222333);
+      insert into public.telegram_link_codes (code, user_id) values ('abcdefghijklmnop', '${P2}');
+      insert into public.notification_log (key, user_id, kind) values ('test:${P1}', '${P1}', 'test');
+    `)
+  })
+
+  it('a person sees that they are connected, but not the chat id, and nobody else', async () => {
+    expect(await runAs(tdb, P1, 'select user_id from public.telegram_links')).toEqual({ ok: true, rows: [{ user_id: P1 }] })
+    expect((await runAs(tdb, P1, 'select chat_id from public.telegram_links')).ok).toBe(false)
+    expect((await runAs(tdb, P1, 'select * from public.telegram_links')).ok).toBe(false)
+    expect(await runAs(tdb, P2, 'select user_id from public.telegram_links')).toEqual({ ok: true, rows: [] })
+    expect((await runAs(tdb, GM, 'select chat_id from public.telegram_links')).ok).toBe(false)
+  })
+
+  it('nobody connects a chat or reads link codes from the app', async () => {
+    expect((await runAs(tdb, P2, `insert into public.telegram_links (user_id, chat_id) values ('${P2}', 1)`)).ok).toBe(false)
+    expect((await runAs(tdb, P2, `update public.telegram_links set chat_id = 5`)).ok).toBe(false)
+    expect((await runAs(tdb, P2, 'select code from public.telegram_link_codes')).ok).toBe(false)
+    expect((await runAs(tdb, P2, `insert into public.telegram_link_codes (code, user_id) values ('zzzzzzzzzzzzzzzz', '${P2}')`)).ok).toBe(false)
+    expect((await runAs(tdb, GM, 'select code from public.telegram_link_codes')).ok).toBe(false)
+  })
+
+  it('a person disconnects only themselves', async () => {
+    expect(await runAs(tdb, P2, `delete from public.telegram_links where user_id = '${P1}' returning user_id`)).toEqual({ ok: true, rows: [] })
+    const own = await runAs(tdb, P1, `delete from public.telegram_links where user_id = '${P1}' returning user_id`)
+    expect(own.ok && own.rows.length).toBe(1)
+  })
+
+  it('everyone keeps their own notification switches', async () => {
+    const add = await runAs(tdb, P1, 'insert into public.notification_prefs (remind_1h) values (false) returning user_id, remind_24h, remind_1h')
+    expect(add).toEqual({ ok: true, rows: [{ user_id: P1, remind_24h: true, remind_1h: false }] })
+    expect((await runAs(tdb, P1, `insert into public.notification_prefs (user_id) values ('${P2}')`)).ok).toBe(false)
+    expect((await runAs(tdb, P1, `update public.notification_prefs set game_started = false where user_id = '${P1}' returning user_id`)).ok).toBe(true)
+    expect(await runAs(tdb, P2, 'select user_id from public.notification_prefs')).toEqual({ ok: true, rows: [] })
+    expect(await runAs(tdb, P2, `update public.notification_prefs set game_started = true returning user_id`)).toEqual({ ok: true, rows: [] })
+  })
+
+  it('the send log is written only by the server; a person reads their own', async () => {
+    expect(await runAs(tdb, P1, 'select kind from public.notification_log')).toEqual({ ok: true, rows: [{ kind: 'test' }] })
+    expect(await runAs(tdb, P2, 'select kind from public.notification_log')).toEqual({ ok: true, rows: [] })
+    expect((await runAs(tdb, P1, `insert into public.notification_log (key, user_id, kind) values ('x', '${P1}', 'test')`)).ok).toBe(false)
+    expect((await runAs(tdb, P1, `delete from public.notification_log`)).ok).toBe(false)
+  })
+})
+
