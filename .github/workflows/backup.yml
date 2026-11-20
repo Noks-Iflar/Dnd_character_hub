@@ -1,0 +1,70 @@
+name: Backup database
+
+# Weekly encrypted copy of the Supabase database (scripts/backup-db.sh).
+# Repository secrets:
+#   SUPABASE_DB_URL    Supabase → Connect → Session pooler connection string, with the database password in it.
+#   BACKUP_PASSPHRASE  Password of the archive. Keep it in a password manager: without it the copies are useless.
+# Copies: Actions → "Backup database" → a run → Artifacts (kept 90 days). Open with 7-Zip and the password.
+# Without the secrets the job is skipped.
+
+on:
+  schedule:
+    - cron: '37 3 * * 0' # Sundays, 03:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # only to keep the scheduled workflows switched on (see the last step)
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Secrets present?
+        id: check
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Add SUPABASE_DB_URL and BACKUP_PASSPHRASE to repository secrets to make backups."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.skip != 'true'
+        uses: actions/checkout@v4
+      # pg_dump must not be older than the database server: take 17 from the PostgreSQL apt repository
+      - name: Install pg_dump 17 and 7-Zip
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          command -v 7z || sudo apt-get install -y -qq 7zip
+      - name: Dump and encrypt
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          mkdir -p out
+          PG_BIN=/usr/lib/postgresql/17/bin OUT_DIR=out ./scripts/backup-db.sh
+      - if: steps.check.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dndhub-backup-${{ github.run_number }}
+          path: out/*.7z
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+      # GitHub switches scheduled workflows off after 60 days without commits in a public repository.
+      # Switching them on again every week keeps the backups and the Supabase keep-alive running.
+      - name: Keep scheduled workflows on
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in backup.yml keepalive.yml; do
+            gh api --method PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable" && echo "$wf: on" || echo "::warning::could not re-enable $wf"
+          done
