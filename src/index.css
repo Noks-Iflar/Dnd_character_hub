@@ -2066,3 +2066,40 @@ button.settings-row:focus-visible {
   margin: 0;
   padding: 6px 14px 12px;
 }
+
+/* ---- settings: Telegram ---- */
+.check-list {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+}
+.check-list legend {
+  padding: 0 0 4px;
+}
+.check-row {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.check-row input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--tech);
+}
+.settings-inline-link {
+  align-self: flex-start;
+  margin-left: -8px;
+}
+.settings-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
