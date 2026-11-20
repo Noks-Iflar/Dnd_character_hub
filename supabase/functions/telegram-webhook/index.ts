@@ -25,6 +25,8 @@ Deno.serve(async (req) => {
   const db = serviceDb()
 
   try {
+    // tidy up first: codes live 10 minutes
+    await db.from('telegram_link_codes').delete().lt('expires_at', new Date().toISOString())
     switch (command.split('@')[0]) {
       case '/start': {
         if (!arg) {
@@ -53,8 +55,6 @@ Deno.serve(async (req) => {
         break
       }
     }
-    // tidy up: codes live 10 minutes
-    await db.from('telegram_link_codes').delete().lt('expires_at', new Date().toISOString())
   } catch (e) {
     console.error('telegram-webhook failed', e instanceof Error ? e.message : String(e))
   }
