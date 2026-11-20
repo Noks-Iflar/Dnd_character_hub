@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import { listPlannedSessions, nextSession, type PlannedSession } from '../../lib/planner'
 import { formatInZone } from '../../lib/timezone'
+import { BrushButton } from '../../components/BrushButton'
 
 /** Home-screen link to the planner showing the next session in the user's time zone. */
 export function NextSessionLink({ zone }: { zone: string }) {
@@ -20,10 +20,10 @@ export function NextSessionLink({ zone }: { zone: string }) {
   }, [now])
 
   return (
-    <Link className="btn" to="/planner">
+    <BrushButton to="/planner">
       {next
         ? `Сессия: ${formatInZone(next.startsAt, zone, { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`
         : 'Планировщик сессий'}
-    </Link>
+    </BrushButton>
   )
 }

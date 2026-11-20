@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { deleteLorePage, getLorePage, saveLorePage, type LorePage } from '../../lib/diary'
 import { Entries } from './Entries'
 import { LoreForm } from './forms'
 import { useViewer } from './useViewer'
+import { BrushButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -43,9 +44,9 @@ export function LorePageView() {
   return (
     <>
       <AppHeader>
-        <Link className="text-btn" to="/diary?tab=lore">
+        <BrushButton variant="link" to="/diary?tab=lore">
           К дневнику
-        </Link>
+        </BrushButton>
       </AppHeader>
       {error && <p className="error">{error}</p>}
       {editing && viewer.isGm ? (
@@ -72,12 +73,10 @@ export function LorePageView() {
             </div>
             {viewer.isGm && (
               <div className="action-row">
-                <button type="button" className="btn" onClick={() => setEditing(true)}>
-                  Изменить
-                </button>
-                <button type="button" className="btn danger-btn" onClick={remove}>
+                <BrushButton onClick={() => setEditing(true)}>Изменить</BrushButton>
+                <BrushButton danger onClick={remove}>
                   Удалить
-                </button>
+                </BrushButton>
               </div>
             )}
             <Entries target={{ lorePageId: page.id }} userId={viewer.userId} isGm={viewer.isGm} defaultName={viewer.defaultName} />

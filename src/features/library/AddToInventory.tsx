@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { addItemChange, type Character } from '../../lib/db'
 import { isCountable, type LibraryRow } from '../../lib/library'
+import { BrushButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -75,15 +76,10 @@ export function AddToInventory({ row, characters }: { row: LibraryRow; character
             />
           </label>
         )}
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ flex: 1, alignSelf: 'flex-end' }}
-          onClick={add}
-          disabled={busy || inGame}
-        >
+        {/* secondary: several entries can be open at once, and a screen has one main button at most */}
+        <BrushButton className="add-to-inventory-btn" onClick={add} disabled={busy || inGame}>
           {busy ? 'Добавляю…' : label}
-        </button>
+        </BrushButton>
       </div>
       {inGame && <span className="muted small">{character?.name} сейчас в игре: добавить можно после сессии.</span>}
       {done && (

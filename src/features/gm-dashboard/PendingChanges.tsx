@@ -3,6 +3,7 @@ import { latestSnapshot, type PendingChange } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
 import { describePath, describeValue } from '../../lib/snapshot/describe'
 import type { JsonObject } from '../../lib/snapshot/read'
+import { BrushButton } from '../../components/BrushButton'
 
 /** Edits of one character waiting to be applied in Foundry. Loads item names on first open. */
 export function PendingChanges({
@@ -66,9 +67,9 @@ export function PendingChanges({
         </p>
       )}
       <div style={{ padding: '0 14px 14px' }}>
-        <button type="button" className="btn" onClick={() => onMarkApplied(changes.map((c) => c.id))}>
+        <BrushButton block onClick={() => onMarkApplied(changes.map((c) => c.id))}>
           Я перенёс в Foundry — отметить применёнными
-        </button>
+        </BrushButton>
       </div>
     </details>
   )

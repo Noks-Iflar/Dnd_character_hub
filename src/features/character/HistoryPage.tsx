@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { getCharacter, listSnapshotVersions, type SnapshotVersion } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
+import { BrushButton } from '../../components/BrushButton'
 
 type State = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; name: string; versions: SnapshotVersion[] }
 
@@ -32,9 +33,9 @@ export function HistoryPage() {
   return (
     <>
       <AppHeader>
-        <Link className="text-btn" to={`/character/${id}`}>
+        <BrushButton variant="link" to={`/character/${id}`}>
           К листу
-        </Link>
+        </BrushButton>
       </AppHeader>
       <div>
         <h1 style={{ fontSize: 32 }}>История версий</h1>

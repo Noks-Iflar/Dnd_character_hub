@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { deleteSession, getSession, listSessions, saveSession, sessionTitle, type DiarySession } from '../../lib/diary'
 import { Entries } from './Entries'
 import { SessionForm } from './forms'
 import { useViewer } from './useViewer'
+import { BrushButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -46,9 +47,9 @@ export function SessionView() {
   return (
     <>
       <AppHeader>
-        <Link className="text-btn" to="/diary">
+        <BrushButton variant="link" to="/diary">
           К дневнику
-        </Link>
+        </BrushButton>
       </AppHeader>
       {error && <p className="error">{error}</p>}
       {editing && viewer.isGm ? (
@@ -92,12 +93,10 @@ export function SessionView() {
             )}
             {viewer.isGm && (
               <div className="action-row">
-                <button type="button" className="btn" onClick={() => setEditing(true)}>
-                  Изменить
-                </button>
-                <button type="button" className="btn danger-btn" onClick={remove}>
+                <BrushButton onClick={() => setEditing(true)}>Изменить</BrushButton>
+                <BrushButton danger onClick={remove}>
                   Удалить
-                </button>
+                </BrushButton>
               </div>
             )}
             <Entries target={{ sessionId: session.id }} userId={viewer.userId} isGm={viewer.isGm} defaultName={viewer.defaultName} />

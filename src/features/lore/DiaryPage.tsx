@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { importDiary, listLore, listSessions, parseDiaryImport, sessionTitle, type DiaryImport, type DiarySession, type LorePage } from '../../lib/diary'
 import { useViewer } from './useViewer'
+import { BrushButton, FileButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -86,13 +87,12 @@ export function DiaryPage() {
 
       {isGm && (
         <div className="action-row">
-          <Link className="btn" to={tab === 'lore' ? '/diary/lore/new' : '/diary/session/new'}>
+          <BrushButton to={tab === 'lore' ? '/diary/lore/new' : '/diary/session/new'}>
             {tab === 'lore' ? 'Новый раздел' : 'Новая сессия'}
-          </Link>
-          <label className="btn">
+          </BrushButton>
+          <FileButton accept=".json,application/json" onChange={onImportFile}>
             Импорт из файла
-            <input type="file" accept=".json,application/json" onChange={onImportFile} hidden />
-          </label>
+          </FileButton>
         </div>
       )}
       {isGm && (pendingImport || importMessage) && (
@@ -105,12 +105,12 @@ export function DiaryPage() {
               </span>
               {alreadyHasData && <span className="error small">В дневнике уже есть записи: импорт добавит новые рядом, дубли не проверяются.</span>}
               <div className="action-row">
-                <button type="button" className="btn btn-primary" onClick={runImport} disabled={busy}>
+                <BrushButton variant="primary" onClick={runImport} disabled={busy}>
                   {busy ? 'Переношу…' : 'Перенести'}
-                </button>
-                <button type="button" className="btn" onClick={() => setPendingImport(null)} disabled={busy}>
+                </BrushButton>
+                <BrushButton onClick={() => setPendingImport(null)} disabled={busy}>
                   Отмена
-                </button>
+                </BrushButton>
               </div>
             </>
           )}

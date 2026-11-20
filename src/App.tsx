@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Outlet, Route, Routes } from 'react-router'
+import { Outlet, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
 import { CharacterPage } from './features/character/CharacterPage'
 import { HistoryPage } from './features/character/HistoryPage'
@@ -23,6 +23,7 @@ import { loadSummaries, type CharacterSummary } from './lib/summary'
 import { useProfile, type UserRole } from './lib/profile'
 import { supabase } from './lib/supabase'
 import { AppHeader } from './components/AppHeader'
+import { BrushButton } from './components/BrushButton'
 import { CharacterCard } from './components/CharacterCard'
 import { Sidebar } from './components/NavMenu'
 import { useWide } from './lib/use-wide'
@@ -99,16 +100,15 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
   return (
     <>
       <AppHeader>
-        <button
-          type="button"
-          className="text-btn"
+        <BrushButton
+          variant="link"
           onClick={() => {
             clearOffline()
             void supabase?.auth.signOut()
           }}
         >
           Выйти
-        </button>
+        </BrushButton>
       </AppHeader>
       <div>
         <h1 style={{ fontSize: 40 }}>
@@ -129,9 +129,9 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
       )}
 
       {isGm && (
-        <Link className="btn btn-primary" to="/gm">
+        <BrushButton variant="primary" icon="dm-screen" block to="/gm">
           Экран мастера
-        </Link>
+        </BrushButton>
       )}
 
       {profile.status === 'ready' && !profile.offline && <NextSessionLink zone={profile.profile.timezone} />}
@@ -142,22 +142,14 @@ function Home({ userId, email }: { userId: string; email: string | undefined }) 
       {/* the desktop sidebar already has these links */}
       <div className="home-links">
         <div className="action-row">
-          <Link className="btn" to="/diary">
-            Дневник
-          </Link>
-          <Link className="btn" to="/library">
-            Библиотека
-          </Link>
+          <BrushButton to="/diary">Дневник</BrushButton>
+          <BrushButton to="/library">Библиотека</BrushButton>
         </div>
-        <Link className="btn" to="/account">
-          Аккаунт и часовой пояс
-        </Link>
-        <Link className="btn" to="/sheet">
-          Открыть лист из файла
-        </Link>
-        <Link to="/status" className="small" style={{ alignSelf: 'center' }}>
+        <BrushButton to="/account">Аккаунт и часовой пояс</BrushButton>
+        <BrushButton to="/sheet">Открыть лист из файла</BrushButton>
+        <BrushButton variant="link" to="/status">
           Проверка доступа
-        </Link>
+        </BrushButton>
       </div>
     </>
   )

@@ -3,6 +3,7 @@ import { AppHeader } from '../../components/AppHeader'
 import { useAuth } from '../../lib/auth-context'
 import { updateOwnProfile, useProfile, type Profile } from '../../lib/profile'
 import { allZones, deviceZone, formatInZone, offsetLabel } from '../../lib/timezone'
+import { BrushButton } from '../../components/BrushButton'
 
 function AccountForm({ profile }: { profile: Profile }) {
   const [name, setName] = useState(profile.display_name)
@@ -48,9 +49,9 @@ function AccountForm({ profile }: { profile: Profile }) {
         </span>
       </div>
       {device !== zone && (
-        <button type="button" className="btn" onClick={() => setZone(device)}>
+        <BrushButton onClick={() => setZone(device)}>
           Взять с устройства: {device} ({offsetLabel(now, device)})
-        </button>
+        </BrushButton>
       )}
       <label className="field">
         Найти пояс (город по-английски: Berlin, Tbilisi, Bangkok…)
@@ -71,9 +72,9 @@ function AccountForm({ profile }: { profile: Profile }) {
         По этому поясу планировщик показывает время сессий и твою сетку. Меняй его, когда переезжаешь.
       </p>
 
-      <button className="btn btn-primary" type="submit" disabled={busy || !name.trim()}>
+      <BrushButton variant="primary" type="submit" disabled={busy || !name.trim()}>
         {busy ? 'Сохраняю…' : 'Сохранить'}
-      </button>
+      </BrushButton>
       {status && (
         <span className="muted small" aria-live="polite">
           {status}

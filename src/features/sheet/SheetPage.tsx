@@ -4,6 +4,7 @@ import { buildSheet } from '../../lib/snapshot/sheet'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { SheetView } from './SheetView'
 import { AppHeader } from '../../components/AppHeader'
+import { FileButton } from '../../components/BrushButton'
 
 /** Phase 2: view a sheet from a local file (snapshot or Export Data). Nothing is uploaded. */
 export function SheetPage() {
@@ -35,10 +36,9 @@ export function SheetPage() {
   return (
     <>
       <AppHeader>
-        <label className="text-btn">
+        <FileButton variant="link" accept=".json,application/json" onChange={onFile}>
           Открыть файл
-          <input type="file" accept=".json,application/json" onChange={onFile} hidden />
-        </label>
+        </FileButton>
       </AppHeader>
 
       {error && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { supabaseAnonKey, supabaseUrl } from '../../lib/supabase'
+import { BrushButton } from '../../components/BrushButton'
 
 type CheckResult =
   | { state: 'no-keys' }
@@ -57,9 +57,7 @@ export function StatusPage() {
       <p className="muted">
         Если видишь красную метку, попробуй включить VPN, обнови страницу и напиши мастеру.
       </p>
-      <Link className="btn" to="/">
-        На главную
-      </Link>
+      <BrushButton to="/">На главную</BrushButton>
     </>
   )
 }
