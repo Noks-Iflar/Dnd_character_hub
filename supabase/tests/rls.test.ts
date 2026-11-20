@@ -642,3 +642,97 @@ describe('telegram notifications', () => {
   })
 })
 
+describe('notification triggers', () => {
+  let ndb: PGlite
+  let velian = ''
+  let kairen = ''
+  let snap = ''
+
+  /** Events queued for the notify function since the last call. */
+  async function queued(): Promise<Record<string, unknown>[]> {
+    const r = await ndb.query<{ url: string; body: Record<string, unknown>; headers: Record<string, string> }>('select url, body, headers from net._calls order by id')
+    await ndb.exec('delete from net._calls')
+    for (const row of r.rows) {
+      expect(row.url).toBe('https://example.supabase.co/functions/v1/notify')
+      expect(row.headers['x-notify-secret']).toBe('s3cret')
+    }
+    return r.rows.map((row) => row.body)
+  }
+
+  beforeAll(async () => {
+    ndb = await createDb()
+    await ndb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const c = await runAs(ndb, GM, `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1'), ('${P2}', 'Kairen', 'a2') returning id, name`)
+    if (!c.ok) throw new Error(c.error)
+    velian = String(c.rows.find((r) => r.name === 'Velian')?.id)
+    kairen = String(c.rows.find((r) => r.name === 'Kairen')?.id)
+  })
+
+  it('sends nothing until both Vault secrets exist, and the app keeps working', async () => {
+    expect((await runAs(ndb, GM, `insert into public.planned_sessions (starts_at) values ('2026-12-05 16:00+00') returning id`)).ok).toBe(true)
+    expect(await queued()).toEqual([])
+    await ndb.exec(`insert into vault.secrets values ('project_url', 'https://example.supabase.co/'), ('notify_secret', 's3cret')`)
+  })
+
+  it('a session set or moved; changing only the note is not news', async () => {
+    const r = await runAs(ndb, GM, `insert into public.planned_sessions (starts_at) values ('2026-12-07 16:00+00') returning id`)
+    const id = r.ok ? String(r.rows[0]?.id) : ''
+    expect(await queued()).toEqual([{ type: 'session_scheduled', session_id: id }])
+    await runAs(ndb, GM, `update public.planned_sessions set note = 'Сессия 6' where id = '${id}'`)
+    expect(await queued()).toEqual([])
+    await runAs(ndb, GM, `update public.planned_sessions set starts_at = '2026-12-08 16:00+00' where id = '${id}'`)
+    expect(await queued()).toEqual([{ type: 'session_moved', session_id: id }])
+  })
+
+  it('the GM starts the game: one event for the whole party; ending it is not news', async () => {
+    await runAs(ndb, GM, `update public.characters set status = 'in_game'`)
+    const [event] = await queued()
+    expect(event?.type).toBe('game_started')
+    expect([...(event?.character_ids as string[])].sort()).toEqual([velian, kairen].sort())
+    await runAs(ndb, GM, `update public.characters set status = 'between_sessions'`)
+    expect(await queued()).toEqual([])
+  })
+
+  it('new snapshots, edits applied (not rejected ones), free time marked', async () => {
+    const s = await runAs(ndb, GM, `insert into public.snapshots (character_id, data) values ('${velian}', '{}') returning id`)
+    snap = s.ok ? String(s.rows[0]?.id) : ''
+    expect(await queued()).toEqual([{ type: 'snapshot_ready', snapshot_ids: [snap] }])
+
+    const ins = (review: string) =>
+      runAs(ndb, GM, `insert into public.changes (character_id, snapshot_id, path, new_value, review) values ('${velian}', '${snap}', 'system.currency.gp', '1', ${review}) returning id`)
+    await ins(`'rejected'`)
+    await runAs(ndb, GM, `update public.changes set applied_at = now() where applied_at is null`)
+    expect(await queued()).toEqual([])
+    await ins(`'accepted'`)
+    await runAs(ndb, GM, `update public.changes set applied_at = now() where applied_at is null`)
+    expect(await queued()).toEqual([{ type: 'edits_applied', character_ids: [velian] }])
+    await runAs(ndb, GM, `update public.changes set review = 'accepted'`)
+    expect(await queued()).toEqual([])
+
+    await runAs(ndb, P1, `insert into public.availability (slot_start) values ('2026-12-10 16:00+00'), ('2026-12-10 16:30+00')`)
+    expect(await queued()).toEqual([{ type: 'availability' }])
+  })
+
+  it('a failing send never breaks the action in the app', async () => {
+    await ndb.exec(`create or replace function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000)
+      returns bigint language plpgsql as $$ begin raise exception 'network down'; end $$`)
+    expect((await runAs(ndb, GM, `insert into public.planned_sessions (starts_at) values ('2026-12-20 16:00+00') returning id`)).ok).toBe(true)
+  })
+
+  it('only the server checks the notify secret; the hourly job is scheduled', async () => {
+    expect((await runAs(ndb, P1, `select public.notify_secret_ok('s3cret')`)).ok).toBe(false)
+    expect((await runAs(ndb, GM, `select public.send_notification('{}')`)).ok).toBe(false)
+    const service = await ndb.transaction(async (tx) => {
+      await tx.exec('set local role service_role')
+      return (await tx.query<{ ok: boolean; bad: boolean; empty: boolean }>(`select public.notify_secret_ok('s3cret') as ok, public.notify_secret_ok('nope') as bad, public.notify_secret_ok('') as empty`)).rows[0]
+    })
+    expect(service).toEqual({ ok: true, bad: false, empty: false })
+    const jobs = await ndb.query<{ schedule: string; command: string }>(`select schedule, command from cron._jobs where name = 'dndhub-notify-hourly'`)
+    expect(jobs.rows[0]?.schedule).toBe('5 * * * *')
+    expect(jobs.rows[0]?.command).toContain('"type": "tick"')
+  })
+})
+
