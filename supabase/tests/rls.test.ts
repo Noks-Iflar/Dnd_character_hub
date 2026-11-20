@@ -529,3 +529,62 @@ describe('planner', () => {
     expect(await runAs(pdb, null, 'select note from public.planned_sessions')).toEqual({ ok: true, rows: [] })
   })
 })
+
+describe('GM review of edits', () => {
+  let rdb: PGlite
+  let velian = ''
+  let snap = ''
+
+  const edit = (uid: string, extra = '') =>
+    runAs(
+      rdb,
+      uid,
+      `insert into public.changes (character_id, snapshot_id, path, old_value, new_value${extra ? ', review' : ''})
+       values ('${velian}', '${snap}', 'system.attributes.hp.value', '59', '40'${extra ? `, '${extra}'` : ''}) returning id, review`,
+    )
+
+  beforeAll(async () => {
+    rdb = await createDb()
+    await rdb.exec(`
+      insert into auth.users values ('${GM}', 'gm@example.com'), ('${P1}', 'anya@example.com'), ('${P2}', 'dima@example.com');
+      update public.profiles set role = 'gm' where id = '${GM}';
+    `)
+    const c = await runAs(rdb, GM, `insert into public.characters (owner_id, name, foundry_actor_id) values ('${P1}', 'Velian', 'a1') returning id`)
+    if (!c.ok) throw new Error(c.error)
+    velian = String(c.rows[0]?.id)
+    const s = await runAs(rdb, GM, `insert into public.snapshots (character_id, data) values ('${velian}', '{}') returning id`)
+    if (!s.ok) throw new Error(s.error)
+    snap = String(s.rows[0]?.id)
+  })
+
+  it('a player edit starts without a decision; the player cannot decide it', async () => {
+    const r = await edit(P1)
+    expect(r.ok && r.rows[0]?.review).toBe(null)
+    expect((await edit(P1, 'accepted')).ok).toBe(false)
+    expect((await edit(P1, 'rejected')).ok).toBe(false)
+    expect(await runAs(rdb, P1, `update public.changes set review = 'accepted' returning id`)).toEqual({ ok: true, rows: [] })
+  })
+
+  it('the GM accepts, rejects and changes their mind; only known decisions', async () => {
+    const r = await edit(P1)
+    const id = r.ok ? String(r.rows[0]?.id) : ''
+    expect((await runAs(rdb, GM, `update public.changes set review = 'rejected' where id = '${id}' returning id`)).ok).toBe(true)
+    expect((await runAs(rdb, GM, `update public.changes set review = 'accepted' where id = '${id}' returning id`)).ok).toBe(true)
+    expect((await runAs(rdb, GM, `update public.changes set review = null, applied_at = now() where id = '${id}' returning id`)).ok).toBe(true)
+    expect((await runAs(rdb, GM, `update public.changes set review = 'maybe' where id = '${id}'`)).ok).toBe(false)
+    // still no other column for the GM either
+    expect((await runAs(rdb, GM, `update public.changes set new_value = '5' where id = '${id}'`)).ok).toBe(false)
+  })
+
+  it('the GM may add own edits already decided', async () => {
+    const r = await edit(GM, 'accepted')
+    expect(r.ok && r.rows[0]?.review).toBe('accepted')
+  })
+
+  it('the owner sees the decision on their edits', async () => {
+    const r = await runAs(rdb, P1, 'select review from public.changes')
+    expect(r.ok && r.rows.length).toBeGreaterThan(0)
+    expect(await runAs(rdb, P2, 'select review from public.changes')).toEqual({ ok: true, rows: [] })
+  })
+})
+
