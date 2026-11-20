@@ -54,15 +54,16 @@ src/                 приложение
 foundry/             макросы Foundry (.js), каждый — отдельный файл
 supabase/migrations/ SQL: таблицы и политики RLS
 supabase/functions/  Edge Functions: telegram-webhook, telegram-link, notify; _shared/messages.ts — тексты бота
+scripts/             backup-db.sh — резервная копия базы (запускает backup.yml)
 fixtures/            реальные экспорты персонажей и компендиумов (в .gitignore)
-.github/workflows/   deploy.yml, keepalive.yml, functions.yml (деплой Edge Functions)
+.github/workflows/   deploy.yml, keepalive.yml, functions.yml (деплой Edge Functions), backup.yml (копия базы раз в неделю)
 ```
 
 Репозиторий публичный: GitHub Pages бесплатно работает только с публичными репозиториями. Поэтому:
 
 - `fixtures/`, выгрузки компендиумов и любые `.env` всегда в `.gitignore`. Контент платных модулей в репозиторий не попадает.
 - В код приложения можно класть только URL Supabase и anon key (через `VITE_` переменные). Ключ `service_role` никогда не попадает ни в код, ни в макросы.
-- Ключ бота (`TELEGRAM_BOT_TOKEN`) и имя бота — только в секретах Edge Functions в Supabase; секрет вызова `notify` — только в Vault базы. Токен деплоя (`SUPABASE_ACCESS_TOKEN`) — только в секретах GitHub.
+- Ключ бота (`TELEGRAM_BOT_TOKEN`) и имя бота — только в секретах Edge Functions в Supabase; секрет вызова `notify` — только в Vault базы. Токен деплоя (`SUPABASE_ACCESS_TOKEN`), строка подключения к базе (`SUPABASE_DB_URL`) и пароль архивов копий (`BACKUP_PASSPHRASE`) — только в секретах GitHub.
 - Безопасность держится на RLS, а не на скрытом коде.
 
 ## Данные
@@ -83,6 +84,8 @@ fixtures/            реальные экспорты персонажей и �
 | `telegram_link_codes` | одноразовые коды для `t.me/<бот>?start=<код>`, живут 10 минут; только серверные функции |
 | `notification_prefs` | флажки видов уведомлений; нет строки — всё включено |
 | `notification_log` | что, кому и когда отправлено; ключ события не даёт отправить дважды |
+
+Резервные копии: `backup.yml` по воскресеньям выгружает `auth.users`/`auth.identities` и все данные `public` в архив 7-Zip с паролем; копии лежат 90 дней в артефактах Actions (репозиторий публичный, поэтому только зашифрованно). Восстановление описано в `README.txt` внутри архива и проверено на чистой базе. Перед применением правок в Foundry — резервная копия мира средствами Foundry.
 
 RLS: игрок читает и правит только своего персонажа, мастер видит всё. Страницы лора с флагом «только мастеру» игрокам не видны, как и записи под ними. Тексты лора хранятся только в базе, не в репозитории.
 
