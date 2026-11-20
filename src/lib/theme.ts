@@ -1,4 +1,6 @@
 // Light / dark theme. The choice is per device; without one we follow the system setting.
+import { useSyncExternalStore } from 'react'
+
 export type Theme = 'dark' | 'light'
 
 const KEY = 'dndhub.theme'
@@ -25,6 +27,24 @@ export function currentTheme(): Theme {
 export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', META_COLOR[theme])
+  for (const notify of listeners) notify()
+}
+
+// Components that depend on the theme (themed icons, the theme switch) re-render on change
+const listeners = new Set<() => void>()
+
+function subscribe(notify: () => void): () => void {
+  listeners.add(notify)
+  return () => listeners.delete(notify)
+}
+
+function shownTheme(): Theme {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+}
+
+/** The theme on screen right now; updates when it is switched. */
+export function useTheme(): Theme {
+  return useSyncExternalStore(subscribe, shownTheme, () => 'dark')
 }
 
 export function chooseTheme(theme: Theme): void {

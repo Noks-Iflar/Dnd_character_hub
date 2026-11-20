@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { ThemeToggle } from '../../components/ThemeToggle'
+import { SettingsLink } from '../../components/SettingsLink'
 import { useAuth } from '../../lib/auth-context'
 import { listProfiles } from '../../lib/db'
 import {
@@ -24,6 +24,7 @@ import {
 } from '../../lib/planner'
 import { useProfile, type Profile } from '../../lib/profile'
 import { deviceZone, formatInZone, fromWall, offsetLabel } from '../../lib/timezone'
+import { BrushButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
@@ -104,9 +105,9 @@ function ScheduleForm({ zone, onDone }: { zone: string; onDone: () => void }) {
         <input value={note} maxLength={500} placeholder="Например: сессия 6, Врата Дагота" onChange={(e) => setNote(e.target.value)} />
       </label>
       {error && <p className="error">{error}</p>}
-      <button className="btn btn-primary" type="submit" disabled={busy || !date}>
+      <BrushButton variant="primary" type="submit" disabled={busy || !date}>
         {busy ? 'Сохраняю…' : 'Назначить'}
-      </button>
+      </BrushButton>
     </form>
   )
 }
@@ -197,7 +198,7 @@ export function PlannerPage() {
             <NavButtons />
             <BrandLink />
           </span>
-          <ThemeToggle />
+          <SettingsLink />
         </div>
       </div>
       <div className="art-title art-title-short">
@@ -219,13 +220,13 @@ export function PlannerPage() {
                 {formatInZone(s.startsAt, zone, { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 {s.note ? <span className="muted small"> · {s.note}</span> : null}
               </span>
-              <button
-                type="button"
-                className="text-btn danger"
+              <BrushButton
+                variant="link"
+                danger
                 onClick={() => deletePlannedSession(s.id).then(() => setVersion((v) => v + 1), (e: unknown) => setError(errorText(e)))}
               >
                 Отменить
-              </button>
+              </BrushButton>
             </div>
           ))}
         </div>
@@ -277,7 +278,7 @@ export function PlannerPage() {
           ‹
         </button>
         <span className="muted small" style={{ textAlign: 'center' }}>
-          Неделя {weekLabel(monday)}, время твоё ({offsetLabel(now, zone)}). <Link to="/account">Сменить пояс</Link>
+          Неделя {weekLabel(monday)}, время твоё ({offsetLabel(now, zone)}). <Link to="/settings?open=timezone">Сменить пояс</Link>
         </span>
         <button type="button" className="icon-btn" aria-label="Следующая неделя" onClick={() => setWeekOffset((w) => w + 1)}>
           ›

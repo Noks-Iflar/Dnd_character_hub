@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { useAuth } from '../../lib/auth-context'
 import { addChange, getCharacter, getNotes, latestSnapshot, listChanges, saveNotes, type Character, type StoredSnapshot } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
@@ -11,6 +11,7 @@ import type { Snapshot } from '../../lib/snapshot/types'
 import type { NotesBinding } from '../sheet/NotesEditor'
 import { SheetView, type SheetEdit } from '../sheet/SheetView'
 import { AppHeader } from '../../components/AppHeader'
+import { BrushButton } from '../../components/BrushButton'
 import { EmptyState } from '../../components/EmptyState'
 
 type State =
@@ -124,10 +125,10 @@ export function CharacterPage() {
       )}
       {state.status === 'online' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="muted small">
-            Снимок из Foundry от {formatDateTime(state.base.createdAt)} ·{' '}
-            <Link to={`/character/${id}/history`}>история версий</Link>
-          </span>
+          <span className="muted small">Снимок из Foundry от {formatDateTime(state.base.createdAt)}</span>
+          <BrushButton icon="letters-bundle" className="history-btn" to={`/character/${id}/history`}>
+            История версий
+          </BrushButton>
           {inGame ? (
             <span className="chip chip-blood">Идёт игра: правки закрыты до следующего снимка</span>
           ) : (

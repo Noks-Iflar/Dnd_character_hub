@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { BrushButton } from '../../components/BrushButton'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { supabase } from '../../lib/supabase'
 
@@ -32,9 +32,7 @@ export function LoginPage() {
       <>
         <h1 style={{ fontSize: 40 }}>Dnd Hub</h1>
         <p className="muted">Приложение не подключено к серверу.</p>
-        <Link className="btn" to="/status">
-          Проверка доступа
-        </Link>
+        <BrushButton to="/status">Проверка доступа</BrushButton>
       </>
     )
   }
@@ -83,21 +81,21 @@ export function LoginPage() {
             {error}
           </p>
         )}
-        <button className="btn btn-primary" type="submit" disabled={busy}>
+        <BrushButton variant="primary" type="submit" block disabled={busy}>
           {busy ? 'Вхожу…' : 'Войти'}
-        </button>
+        </BrushButton>
       </form>
 
       <p className="muted small" style={{ textAlign: 'center', margin: 0 }}>
         Аккаунты создаёт мастер. Забыл пароль — напиши мастеру.
       </p>
       <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 4 }}>
-        <Link className="text-btn" to="/sheet">
+        <BrushButton variant="link" to="/sheet">
           Лист из файла без входа
-        </Link>
-        <Link className="text-btn" to="/status">
+        </BrushButton>
+        <BrushButton variant="link" to="/status">
           Проверка доступа
-        </Link>
+        </BrushButton>
       </div>
     </>
   )

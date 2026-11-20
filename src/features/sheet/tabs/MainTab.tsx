@@ -5,6 +5,7 @@ import { Approx } from '../Approx'
 import { statText } from '../format'
 import type { TabProps } from '../sheet-ui'
 import { Stepper } from '../Stepper'
+import { BrushButton } from '../../../components/BrushButton'
 
 /** "Лист": portrait, HP and defence, abilities, saves, skills. */
 export function MainTab({ sheet, edit, rollD20 }: TabProps) {
@@ -189,9 +190,9 @@ export function MainTab({ sheet, edit, rollD20 }: TabProps) {
       <div className="section-title">
         <h2 className="section-title-text">Навыки</h2>
         {proficientSkills.length > 0 && proficientSkills.length < sheet.skills.length && (
-          <button type="button" className="text-btn section-link" onClick={() => setAllSkills((v) => !v)}>
+          <BrushButton variant="link" className="section-link" onClick={() => setAllSkills((v) => !v)}>
             {allSkills ? 'Только владение' : `Все ${sheet.skills.length}`}
-          </button>
+          </BrushButton>
         )}
       </div>
       <div className="card list">

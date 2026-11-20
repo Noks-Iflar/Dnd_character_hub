@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { addEntry, deleteEntry, ENTRY_KIND_LABEL, listEntries, updateEntry, type DiaryEntry, type EntryKind, type EntryTarget } from '../../lib/diary'
 import { formatDateTime } from '../../lib/format-date'
+import { BrushButton } from '../../components/BrushButton'
 
 const KINDS: EntryKind[] = ['memory', 'lore', 'general']
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -65,13 +66,13 @@ function EntryForm({
       </label>
       {error && <p className="error">{error}</p>}
       <div className={onCancel ? 'action-row' : ''}>
-        <button className="btn btn-primary" type="submit" disabled={busy || !draft.body.trim()} style={onCancel ? undefined : { width: '100%' }}>
+        <BrushButton variant="primary" type="submit" block={!onCancel} disabled={busy || !draft.body.trim()}>
           {busy ? 'Сохраняю…' : submitLabel}
-        </button>
+        </BrushButton>
         {onCancel && (
-          <button className="btn" type="button" onClick={onCancel} disabled={busy}>
+          <BrushButton onClick={onCancel} disabled={busy}>
             Отмена
-          </button>
+          </BrushButton>
         )}
       </div>
     </form>
@@ -144,12 +145,12 @@ export function Entries({ target, userId, isGm, defaultName }: { target: EntryTa
                     <p className="prose">{e.body}</p>
                     {(isGm || e.authorId === userId) && (
                       <div className="entry-actions">
-                        <button type="button" className="text-btn" onClick={() => setEditing(e.id)}>
+                        <BrushButton variant="link" onClick={() => setEditing(e.id)}>
                           Изменить
-                        </button>
-                        <button type="button" className="text-btn danger" onClick={() => remove(e.id)}>
+                        </BrushButton>
+                        <BrushButton variant="link" danger onClick={() => remove(e.id)}>
                           Удалить
-                        </button>
+                        </BrushButton>
                       </div>
                     )}
                   </article>
@@ -158,7 +159,7 @@ export function Entries({ target, userId, isGm, defaultName }: { target: EntryTa
             </section>
           )
         })}
-      {userId && (
+      {userId && editing === null && (
         <details className="card list add-entry">
           <summary className="list-row static">
             <span className="grow">Добавить запись</span>

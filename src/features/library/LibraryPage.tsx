@@ -16,6 +16,7 @@ import { listCharacters, type Character } from '../../lib/db'
 import { useViewer } from '../lore/useViewer'
 import { AddToInventory } from './AddToInventory'
 import { matches, metaLine, priceInCopper, RARITY_LABEL, RARITY_ORDER, rarityRank, TYPE_LABEL } from './labels'
+import { BrushButton, FileButton } from '../../components/BrushButton'
 
 type Sort = 'name' | 'price' | 'rarity' | 'level'
 const PAGE = 60
@@ -173,22 +174,19 @@ export function LibraryPage() {
       <aside className="two-col-side">
       {isGm && (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label className="btn">
+          <FileButton icon="sealed-letter" accept=".json,application/json" onChange={onFile}>
             Загрузить выгрузку библиотеки
-            <input type="file" accept=".json,application/json" onChange={onFile} hidden />
-          </label>
+          </FileButton>
           {upload && (
             <>
               <span className="small">
                 В файле {upload.total} записей; повторов из Laaru убрано {upload.duplicates}; будет загружено {upload.rows.length}.
               </span>
               <div className="action-row">
-                <button type="button" className="btn btn-primary" onClick={runUpload}>
+                <BrushButton variant="primary" onClick={runUpload}>
                   Загрузить
-                </button>
-                <button type="button" className="btn" onClick={() => setUpload(null)}>
-                  Отмена
-                </button>
+                </BrushButton>
+                <BrushButton onClick={() => setUpload(null)}>Отмена</BrushButton>
               </div>
             </>
           )}
@@ -287,9 +285,7 @@ export function LibraryPage() {
             </div>
           )}
           {result.length > shown && (
-            <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE)}>
-              Показать ещё ({result.length - shown})
-            </button>
+            <BrushButton onClick={() => setShown((n) => n + PAGE)}>Показать ещё ({result.length - shown})</BrushButton>
           )}
         </>
       )}

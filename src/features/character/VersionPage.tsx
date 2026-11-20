@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { AppHeader } from '../../components/AppHeader'
 import { getSnapshot, listChanges, type StoredSnapshot } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
 import { applyChanges, type Change } from '../../lib/snapshot/changes'
 import { buildSheet } from '../../lib/snapshot/sheet'
 import { SheetView } from '../sheet/SheetView'
+import { BrushButton } from '../../components/BrushButton'
 
 type State =
   | { status: 'loading' }
@@ -39,9 +40,9 @@ export function VersionPage() {
   return (
     <>
       <AppHeader>
-        <Link className="text-btn" to={`/character/${id}/history`}>
+        <BrushButton variant="link" to={`/character/${id}/history`}>
           К истории
-        </Link>
+        </BrushButton>
       </AppHeader>
       {state.status === 'loading' && <p className="muted">Загружаю версию…</p>}
       {state.status === 'error' && <p className="error">{state.message}</p>}

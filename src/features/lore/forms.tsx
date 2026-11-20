@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { LoreInput, SessionInput } from '../../lib/diary'
+import { BrushButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -44,12 +45,12 @@ export function LoreForm({ initial, onSave, onCancel }: { initial: LoreInput; on
       </button>
       {error && <p className="error">{error}</p>}
       <div className="action-row">
-        <button className="btn btn-primary" type="submit" disabled={busy || !v.title.trim()}>
+        <BrushButton variant="primary" type="submit" disabled={busy || !v.title.trim()}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
-        </button>
-        <button className="btn" type="button" onClick={onCancel} disabled={busy}>
+        </BrushButton>
+        <BrushButton onClick={onCancel} disabled={busy}>
           Отмена
-        </button>
+        </BrushButton>
       </div>
     </form>
   )
@@ -87,12 +88,12 @@ export function SessionForm({
       </label>
       {error && <p className="error">{error}</p>}
       <div className="action-row">
-        <button className="btn btn-primary" type="submit" disabled={busy || v.number < 1}>
+        <BrushButton variant="primary" type="submit" disabled={busy || v.number < 1}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
-        </button>
-        <button className="btn" type="button" onClick={onCancel} disabled={busy}>
+        </BrushButton>
+        <BrushButton onClick={onCancel} disabled={busy}>
           Отмена
-        </button>
+        </BrushButton>
       </div>
     </form>
   )

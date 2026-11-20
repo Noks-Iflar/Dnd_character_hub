@@ -21,10 +21,11 @@ import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { CharacterCard } from '../../components/CharacterCard'
 import { EmptyState } from '../../components/EmptyState'
 import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { ThemeToggle } from '../../components/ThemeToggle'
+import { SettingsLink } from '../../components/SettingsLink'
 import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
 import { PendingChanges } from './PendingChanges'
+import { BrushButton, FileButton } from '../../components/BrushButton'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -145,6 +146,11 @@ export function GmPage() {
   const lastSnapshot = characters.map((c) => c.lastSnapshotAt).filter((d): d is string => !!d).sort().at(-1) ?? null
   const ownerName = (ownerId: string | null) => profiles.find((p) => p.id === ownerId)?.display_name ?? null
 
+  // One main button per screen: the next thing the GM should do
+  const main: 'upload' | 'applied' | 'take' | 'game' =
+    pending.length > 0 ? 'upload' : downloaded.length > 0 ? 'applied' : pendingChanges.length > 0 ? 'take' : 'game'
+  const weight = (k: typeof main) => (main === k ? 'primary' : 'secondary')
+
   return (
     <>
       <div className="art-header">
@@ -156,7 +162,7 @@ export function GmPage() {
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="chip chip-on-art">Мастер</span>
-            <ThemeToggle />
+            <SettingsLink />
           </span>
         </div>
       </div>
@@ -168,19 +174,24 @@ export function GmPage() {
 
       {loadError && <p className="error">{loadError}</p>}
 
-      <div className="action-row">
-        <button
-          type="button"
-          className="btn btn-primary"
+      <div className="button-stack">
+        {pendingChanges.length > 0 && (
+          <BrushButton variant={weight('take')} icon="quill-scroll" block onClick={downloadChanges}>
+            Забрать правки · {pendingChanges.length}
+          </BrushButton>
+        )}
+        <BrushButton
+          variant={weight('game')}
+          icon="crossed-swords"
+          block
           disabled={characters.length === 0}
           onClick={() => setStatus(allIds, anyBetween ? 'in_game' : 'between_sessions')}
         >
           {anyBetween ? 'Начать игру' : 'Игра окончена'}
-        </button>
-        <label className="btn">
+        </BrushButton>
+        <FileButton icon="sealed-letter" block accept=".json,application/json" onChange={onFile}>
           Загрузить снимок
-          <input type="file" accept=".json,application/json" onChange={onFile} hidden />
-        </label>
+        </FileButton>
       </div>
 
       {(fileError || pending.length > 0 || results.length > 0) && (
@@ -218,12 +229,12 @@ export function GmPage() {
                 })}
               </ul>
               <div className="action-row">
-                <button className="btn btn-primary" onClick={upload} disabled={busy}>
+                <BrushButton variant={weight('upload')} onClick={upload} disabled={busy}>
                   {busy ? 'Загружаю…' : `Загрузить: ${pending.length}`}
-                </button>
-                <button type="button" className="btn" onClick={() => setPending([])} disabled={busy}>
+                </BrushButton>
+                <BrushButton onClick={() => setPending([])} disabled={busy}>
                   Отмена
-                </button>
+                </BrushButton>
               </div>
             </>
           )}
@@ -243,15 +254,12 @@ export function GmPage() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <span className="label-caps">Перенос в Foundry</span>
           <span className="muted small">
-            Правок ждут: {pendingChanges.length}. Скачай файл и примени его в Foundry макросом «Применить правки».
+            Правок ждут: {pendingChanges.length}. «Забрать правки» скачает файл — примени его в Foundry макросом «Применить правки».
           </span>
-          <button type="button" className="btn" onClick={downloadChanges}>
-            Скачать правки для Foundry
-          </button>
           {downloaded.length > 0 && (
-            <button type="button" className="btn btn-primary" onClick={() => markApplied(downloaded).then(() => setDownloaded([]))}>
+            <BrushButton variant={weight('applied')} block onClick={() => markApplied(downloaded).then(() => setDownloaded([]))}>
               Всё перенесено — отметить применёнными ({downloaded.length})
-            </button>
+            </BrushButton>
           )}
         </div>
       )}
@@ -314,9 +322,9 @@ export function GmPage() {
                 >
                   {c.status === 'in_game' ? 'Открыть правки только ему' : 'Закрыть правки только ему'}
                 </button>
-                <button type="button" className="btn danger-btn" onClick={() => removeCharacter(c)}>
+                <BrushButton danger onClick={() => removeCharacter(c)}>
                   Удалить персонажа
-                </button>
+                </BrushButton>
               </div>
             </details>
           </div>
