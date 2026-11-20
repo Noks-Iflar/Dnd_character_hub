@@ -12,6 +12,8 @@ import type { NotesBinding } from '../sheet/NotesEditor'
 import { SheetView, type SheetEdit } from '../sheet/SheetView'
 import { AppHeader } from '../../components/AppHeader'
 import { BrushButton } from '../../components/BrushButton'
+import { ChangeLine } from '../../components/ChangeLine'
+import { countDecisions, reviewLines } from '../../lib/review'
 import { EmptyState } from '../../components/EmptyState'
 
 type State =
@@ -108,7 +110,10 @@ export function CharacterPage() {
 
   const inGame = state.status === 'online' && state.character?.status === 'in_game'
   const edit: SheetEdit | undefined = state.status === 'online' && !inGame ? { set: record } : undefined
-  const pendingCount = state.status === 'online' ? state.changes.filter((c) => !c.appliedAt).length : 0
+  // The GM's decisions, line by line (one line per field or added item)
+  const own = state.status === 'online' ? state.changes : []
+  const open = countDecisions(reviewLines(own.filter((c) => !c.appliedAt)))
+  const rejected = reviewLines(own.filter((c) => c.review === 'rejected'))
 
   return (
     <>
@@ -133,10 +138,27 @@ export function CharacterPage() {
             <span className="chip chip-blood">Идёт игра: правки закрыты до следующего снимка</span>
           ) : (
             <span className="muted small">
-              Правки сохраняются сами и попадут в Foundry перед следующей игрой.
-              {pendingCount > 0 && ` Ждут мастера: ${pendingCount}.`}
+              Правки сохраняются сами и попадут в Foundry перед следующей игрой, если мастер их примет.
+              {open.undecided > 0 && ` Ждут решения мастера: ${open.undecided}.`}
+              {open.accepted > 0 && ` Мастер принял: ${open.accepted}.`}
               {saving > 0 && ' Сохраняю…'}
             </span>
+          )}
+          {rejected.length > 0 && state.status === 'online' && (
+            <details className="card list rejected-edits">
+              <summary className="list-row static">
+                <span className="grow">Мастер отклонил правки</span>
+                <span className="chip chip-blood">{rejected.length}</span>
+              </summary>
+              <ul className="plain-list">
+                {rejected.map((line) => (
+                  <li key={line.key}>
+                    <ChangeLine line={line} source={state.base.snapshot.source} />
+                  </li>
+                ))}
+              </ul>
+              <p className="muted small">Их нет на листе. Если не согласен — обсуди с мастером.</p>
+            </details>
           )}
           {saveError && (
             <p className="error" role="alert">

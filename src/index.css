@@ -2056,3 +2056,13 @@ button.settings-row:focus-visible {
     width: 260px;
   }
 }
+
+/* player: edits the GM rejected */
+.rejected-edits .plain-list {
+  margin: 0;
+  padding: 10px 14px 0;
+}
+.rejected-edits p {
+  margin: 0;
+  padding: 6px 14px 12px;
+}

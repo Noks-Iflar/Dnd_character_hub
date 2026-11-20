@@ -1,31 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { BrushButton } from '../../components/BrushButton'
+import { ChangeLine } from '../../components/ChangeLine'
 import { latestSnapshot, type Character, type PendingChange } from '../../lib/db'
 import { formatDateTime } from '../../lib/format-date'
-import { countDecisions, reviewLines, rowIds, type ReviewLine } from '../../lib/review'
+import { countDecisions, reviewLines, rowIds } from '../../lib/review'
 import type { Review } from '../../lib/snapshot/changes'
-import { describePath, describeValue } from '../../lib/snapshot/describe'
 import type { JsonObject } from '../../lib/snapshot/read'
-
-/** What the line changes, in words: "Хиты: 59 → 40" or "Добавить: Зелье ×2". */
-export function LineText({ line, source }: { line: ReviewLine; source: JsonObject | null }) {
-  const c = line.last
-  if (line.kind === 'add_item') {
-    return (
-      <>
-        <span>Добавить: </span>
-        <strong>{c.itemName ?? 'предмет'}</strong>
-        {c.itemType === 'spell' ? ' (заклинание)' : c.itemType === 'feat' ? ' (черта)' : ` ×${describeValue(c.newValue)}`}
-      </>
-    )
-  }
-  return (
-    <>
-      <span>{describePath(line.path, source)}: </span>
-      <span className="muted">{describeValue(line.oldValue)}</span> → <strong>{describeValue(line.newValue)}</strong>
-    </>
-  )
-}
 
 /** Item names for item fields come from the character's latest snapshot; loaded once. */
 function useSources(characterIds: string[]): Record<string, JsonObject | null> {
@@ -97,7 +77,7 @@ export function ReviewChanges({
               <li key={line.key} className={`review-line ${line.decision}`}>
                 <div className="review-what">
                   <span className="review-text">
-                    <LineText line={line} source={sources[character.id] ?? null} />
+                    <ChangeLine line={line} source={sources[character.id] ?? null} />
                   </span>
                   <span className="muted small">
                     {formatDateTime(line.last.createdAt)}
