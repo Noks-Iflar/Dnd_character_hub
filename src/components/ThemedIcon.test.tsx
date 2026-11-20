@@ -19,6 +19,8 @@ describe('ThemedIcon', () => {
     expect(img()?.getAttribute('alt')).toBe('')
     act(() => applyTheme('light'))
     expect(img()?.getAttribute('src')).toMatch(/ui\/icons\/light\/map\.png$/)
+    act(() => root.render(<ThemedIcon name="map" size={32} inverse />))
+    expect(img()?.getAttribute('src')).toMatch(/ui\/icons\/dark\/map\.png$/)
     act(() => root.unmount())
   })
 })

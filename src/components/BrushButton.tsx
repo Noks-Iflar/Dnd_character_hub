@@ -33,7 +33,7 @@ function brushClass({ variant = 'secondary', block, danger, className }: Omit<Lo
 function Content({ icon, iconSize, variant, children }: Pick<Look, 'icon' | 'iconSize' | 'variant' | 'children'>) {
   return (
     <>
-      {icon && <ThemedIcon name={icon} size={iconSize ?? (variant === 'link' ? 24 : 32)} />}
+      {icon && <ThemedIcon name={icon} size={iconSize ?? (variant === 'link' ? 24 : 32)} inverse={variant === 'primary'} />}
       <span className="brush-btn-label">{children}</span>
     </>
   )

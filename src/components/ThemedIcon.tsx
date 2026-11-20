@@ -21,12 +21,24 @@ export type IconName =
  * parchment ones dark outlines on light objects. Use from 32 px; small glyphs stay line icons.
  * Decorative: the button or tile next to it already has a text label.
  */
-export function ThemedIcon({ name, size, className }: { name: IconName; size: number; className?: string }) {
+export function ThemedIcon({
+  name,
+  size,
+  className,
+  inverse = false,
+}: {
+  name: IconName
+  size: number
+  className?: string
+  /** sits on an inverted background (the primary button: light stroke in the dark theme, dark on parchment) */
+  inverse?: boolean
+}) {
   const theme = useTheme()
+  const folder = inverse ? (theme === 'dark' ? 'light' : 'dark') : theme
   return (
     <img
       className={className ? `themed-icon ${className}` : 'themed-icon'}
-      src={`${import.meta.env.BASE_URL}ui/icons/${theme}/${name}.png`}
+      src={`${import.meta.env.BASE_URL}ui/icons/${folder}/${name}.png`}
       alt=""
       width={size}
       height={size}

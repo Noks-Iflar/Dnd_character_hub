@@ -1828,3 +1828,6 @@ details.add-entry > summary::-webkit-details-marker {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+.history-btn {
+  align-self: flex-start;
+}
