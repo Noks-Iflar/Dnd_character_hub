@@ -30,6 +30,8 @@ export default defineConfig({
       workbox: {
         // Cache the app shell; Supabase data will get its own offline handling in phase 3
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,woff2}'],
+        // header arts: browsers with WebP (all current ones) never ask for the .jpg fallbacks
+        globIgnores: ['**/ui/art/headers/*.jpg'],
       },
     }),
   ],

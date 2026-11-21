@@ -1,9 +1,9 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { AppHeader } from '../../components/AppHeader'
 import { importDiary, listLore, listSessions, parseDiaryImport, sessionTitle, type DiaryImport, type DiarySession, type LorePage } from '../../lib/diary'
 import { useViewer } from './useViewer'
 import { BrushButton, FileButton } from '../../components/BrushButton'
+import { ArtHeader, ArtNav } from '../../components/ArtHeader'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -68,11 +68,9 @@ export function DiaryPage() {
 
   return (
     <>
-      <AppHeader />
-      <div>
-        <h1 style={{ fontSize: 32 }}>Дневник приключенцев</h1>
-        <span className="brush-underline" aria-hidden="true" />
-      </div>
+      <ArtHeader name="lore" alt="Гном-летописец пишет хронику при лампе" focusY={0.3} top={<ArtNav />}>
+        <h1>Дневник приключенцев</h1>
+      </ArtHeader>
 
       <div className="segmented" role="group" aria-label="Раздел дневника" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <button type="button" aria-pressed={tab === 'sessions'} onClick={() => setParams({ tab: 'sessions' })}>

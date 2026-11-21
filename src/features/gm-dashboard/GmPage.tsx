@@ -21,14 +21,13 @@ import { parseSnapshotJson } from '../../lib/snapshot/parse'
 import { SUPPORTED, type Snapshot } from '../../lib/snapshot/types'
 import { CharacterCard } from '../../components/CharacterCard'
 import { EmptyState } from '../../components/EmptyState'
-import { BrandLink, NavButtons } from '../../components/NavMenu'
-import { SettingsLink } from '../../components/SettingsLink'
 import { buildChangesFile } from '../../lib/foundry-changes'
 import { loadSummaries, type CharacterSummary } from '../../lib/summary'
 import { ReviewChanges } from './ReviewChanges'
 import { countDecisions, reviewLines, rowIds } from '../../lib/review'
 import type { Review } from '../../lib/snapshot/changes'
 import { BrushButton, FileButton } from '../../components/BrushButton'
+import { ArtHeader, ArtNav } from '../../components/ArtHeader'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -187,24 +186,10 @@ export function GmPage() {
 
   return (
     <>
-      <div className="art-header">
-        <img src={`${import.meta.env.BASE_URL}ui/art/party.jpg`} alt="Партия идёт мимо горящих заводов" style={{ objectPosition: 'center 30%' }} />
-        <div className="art-header-bar">
-          <span className="app-header-nav">
-            <NavButtons />
-            <BrandLink />
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span className="chip chip-on-art">Мастер</span>
-            <SettingsLink />
-          </span>
-        </div>
-      </div>
-      <div className="art-title art-title-short">
-        <h1 style={{ fontSize: 32 }}>Партия</h1>
-        <span className="brush-underline" aria-hidden="true" />
-        <span className="muted small">{lastSnapshot ? `Последний снимок: ${formatDateTime(lastSnapshot)}` : 'Снимков ещё нет'}</span>
-      </div>
+      <ArtHeader name="master" alt="Мастер-дроу за ширмой с кубиком в руке" focusY={0.05} top={<ArtNav />}>
+        <h1>Партия</h1>
+      </ArtHeader>
+      <span className="muted small art-subtitle">{lastSnapshot ? `Последний снимок: ${formatDateTime(lastSnapshot)}` : 'Снимков ещё нет'}</span>
 
       {loadError && <p className="error">{loadError}</p>}
 

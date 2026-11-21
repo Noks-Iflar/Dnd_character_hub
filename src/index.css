@@ -898,58 +898,13 @@ button.attack-btn:hover {
   color: var(--text);
 }
 
-/* Full-width art at the top of a screen, fading into the background under the title */
-.art-header {
-  position: relative;
-  height: 200px;
-  margin: -12px -16px 0;
-  overflow: hidden;
-}
-.art-header-tall {
-  height: min(430px, 52vh);
-}
-.art-header > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.art-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 60%;
-  background: linear-gradient(to bottom, var(--fade0), var(--bg));
-}
-.art-header-bar {
-  position: absolute;
-  z-index: 1;
-  left: 16px;
-  right: 6px;
-  top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #e8e4dc;
-}
-.art-header-bar .brand,
-.art-header-bar .icon-btn {
-  color: #e8e4dc;
-}
 .art-title {
   position: relative;
   z-index: 1;
-  margin-top: -110px;
   padding: 0 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-.art-title-short {
-  margin-top: -60px;
 }
 .hero-title {
   font-family: var(--font-caps);
@@ -1069,10 +1024,6 @@ button.attack-btn:hover {
   text-align: right;
 }
 
-.art-header-banner {
-  height: 176px;
-  margin: 0 -16px;
-}
 .slot-tile {
   gap: 6px;
 }
@@ -1117,14 +1068,6 @@ button.attack-btn:hover {
   background: linear-gradient(var(--surface), var(--surface)), var(--bg);
 }
 
-.chip-on-art {
-  border: none;
-  background: rgba(24, 23, 26, 0.78);
-  color: #e8e4dc;
-}
-.chip-on-art::before {
-  display: none;
-}
 .action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1413,9 +1356,6 @@ details.add-entry > summary::-webkit-details-marker {
   display: inline-flex;
   margin-left: -10px;
 }
-.art-header-bar .nav-buttons .icon-btn {
-  color: #e8e4dc;
-}
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -1531,13 +1471,6 @@ details.add-entry > summary::-webkit-details-marker {
     max-width: 1120px;
     padding: 16px 32px 40px;
   }
-  .art-header {
-    margin: -16px -32px 0;
-    height: 240px;
-  }
-  .art-header-tall {
-    height: min(430px, 52vh);
-  }
   .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1605,10 +1538,6 @@ details.add-entry > summary::-webkit-details-marker {
 }
 .sheet-wide .roll-toast {
   bottom: 24px;
-}
-.sheet-pane .art-header {
-  margin: 0;
-  border-radius: var(--r1);
 }
 
 /* ---- two columns on desktop; on the phone the wrappers vanish and blocks stack as before ---- */
@@ -2102,4 +2031,110 @@ button.settings-row:focus-visible {
   gap: 2px;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
+}
+
+/* ---- ArtHeader: painted art in its own proportion ---- */
+:root {
+  /* light text and a dark see-through pill: readable on any part of any art, in both themes */
+  --on-art: #f4f1ea;
+  --art-pill: rgba(17, 17, 19, 0.55);
+}
+.art-hero {
+  position: relative;
+  /* bleed to the screen edges over the page padding */
+  margin: -12px -16px 0;
+  aspect-ratio: 2576 / 1274;
+  max-height: 360px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.art-hero picture,
+.art-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.art-hero img {
+  object-fit: cover;
+  object-position: 50% calc(var(--focus-y, 0.5) * 100%);
+}
+.art-hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 35%;
+  background: linear-gradient(to bottom, var(--fade0), var(--bg));
+  pointer-events: none;
+}
+.art-hero-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.art-hero-top > * {
+  pointer-events: auto;
+}
+.art-hero-bottom {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 25%;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+.art-hero-bottom h1 {
+  margin: 0;
+  font-size: clamp(22px, 7vw, 34px);
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* corner controls on the art: light glyphs on a dark see-through pill */
+.art-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--art-pill);
+  color: var(--on-art);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.art-pill .icon-btn,
+.art-pill .nav-buttons .icon-btn {
+  color: var(--on-art);
+}
+.art-pill .nav-buttons {
+  margin-left: 0;
+}
+@media (min-width: 1024px) {
+  .art-hero {
+    margin: -16px -32px 0;
+  }
+}
+
+/* sign-in title: 48 px up minus the 16 px gap of the page = 32 px into the faded bottom of the art */
+.art-title-over {
+  margin-top: -48px;
+}
+/* a line right under an art header (last snapshot, class and ability) */
+.art-subtitle {
+  margin-top: -10px;
+}
+.art-hero-inline {
+  margin: 0 -16px;
+}
+@media (min-width: 1024px) {
+  .sheet-pane .art-hero {
+    margin: 0;
+    border-radius: var(--r1);
+  }
 }

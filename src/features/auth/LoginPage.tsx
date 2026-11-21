@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { BrushButton } from '../../components/BrushButton'
+import { ArtHeader } from '../../components/ArtHeader'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { supabase } from '../../lib/supabase'
 
@@ -39,18 +40,22 @@ export function LoginPage() {
 
   return (
     <>
-      <div className="art-header art-header-tall">
-        <img
-          src={`${import.meta.env.BASE_URL}ui/art/login.jpg`}
-          alt="Дроу-бард с лютней, эльф в кожаном доспехе и рыцарь в кольчуге за столом с картой, свечой и кубиками"
-          style={{ objectPosition: '35% center' }}
-        />
-        <div className="art-header-bar">
-          <span />
-          <ThemeToggle />
-        </div>
-      </div>
-      <div className="art-title">
+      <ArtHeader
+        name="login"
+        alt="Дайдэн, Муарен и Мерик бросают кубики при свече"
+        focusY={0.35}
+        priority
+        top={
+          <>
+            <span />
+            <span className="art-pill">
+              <ThemeToggle />
+            </span>
+          </>
+        }
+      />
+      {/* reaches at most 32 px into the header, only over its faded bottom */}
+      <div className="art-title art-title-over">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={`${import.meta.env.BASE_URL}ui/d20.webp`} alt="" width={48} height={48} />
           <h1 className="hero-title">Dnd Hub</h1>
